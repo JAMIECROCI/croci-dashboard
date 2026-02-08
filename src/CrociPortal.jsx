@@ -279,13 +279,52 @@ function processData(masterRows, salesRows, selectedWeek) {
     const key = event.eventName.toLowerCase();
     const eventSales = salesByEvent[key] || [];
     event.liveSalesCount = eventSales.length;
-    event.uniqueAgents = new Set(eventSales.map(s => s.agentCode)).size;
+    event.uniqueAgentCodes = new Set(eventSales.map(s => s.agentCode));
+    event.uniqueAgents = event.uniqueAgentCodes.size;
     event.staffFraction = `${event.uniqueAgents} / ${event.expectedStaff || "?"}`;
     event.cpa = event.liveSalesCount > 0 ? (event.totalUpfronts / event.liveSalesCount) : null;
   });
 
+  // Merge duplicate events within the same week (e.g. two booths at same show)
+  const mergeMap = {};
+  events.forEach(event => {
+    const mergeKey = `${event.eventName.toLowerCase()}|||${event.weekNum}`;
+    if (!mergeMap[mergeKey]) {
+      mergeMap[mergeKey] = { ...event, uniqueAgentCodes: new Set(event.uniqueAgentCodes || []) };
+    } else {
+      const merged = mergeMap[mergeKey];
+      merged.salesTarget += event.salesTarget || 0;
+      merged.expectedStaff += event.expectedStaff || 0;
+      merged.totalUpfronts += event.totalUpfronts || 0;
+      merged.masterSales += event.masterSales || 0;
+      merged.liveDays = Math.max(merged.liveDays || 0, event.liveDays || 0);
+      // Combine unique agent sets (sales are already counted once per event name, so no double-counting)
+      if (event.uniqueAgentCodes) {
+        event.uniqueAgentCodes.forEach(code => merged.uniqueAgentCodes.add(code));
+      }
+      // Use earliest start date and latest end date for the combined event
+      if (event.startDate && (!merged.startDate || event.startDate < merged.startDate)) {
+        merged.startDate = event.startDate;
+        merged.startDateRaw = event.startDateRaw;
+      }
+      if (event.endDate && (!merged.endDate || event.endDate > merged.endDate)) {
+        merged.endDate = event.endDate;
+        merged.endDateRaw = event.endDateRaw;
+      }
+    }
+  });
+
+  // Recalculate derived fields for merged events and build final array
+  const mergedEvents = Object.values(mergeMap).map(event => {
+    event.uniqueAgents = event.uniqueAgentCodes.size;
+    event.staffFraction = `${event.uniqueAgents} / ${event.expectedStaff || "?"}`;
+    event.liveSalesCount = event.liveSalesCount || 0;
+    event.cpa = event.liveSalesCount > 0 ? (event.totalUpfronts / event.liveSalesCount) : null;
+    return event;
+  });
+
   // Determine available weeks
-  const weekNums = [...new Set(events.map(e => e.weekNum).filter(Boolean))];
+  const weekNums = [...new Set(mergedEvents.map(e => e.weekNum).filter(Boolean))];
   weekNums.sort((a, b) => {
     const numA = parseInt(a.replace(/\D/g, ""), 10);
     const numB = parseInt(b.replace(/\D/g, ""), 10);
@@ -297,7 +336,7 @@ function processData(masterRows, salesRows, selectedWeek) {
   const currentMonday = getWeekMonday(today);
   const currentSunday = getWeekSunday(currentMonday);
   let currentWeek = null;
-  for (const event of events) {
+  for (const event of mergedEvents) {
     if (event.startDate && event.endDate) {
       if (event.startDate <= currentSunday && event.endDate >= currentMonday) {
         currentWeek = event.weekNum;
@@ -310,8 +349,8 @@ function processData(masterRows, salesRows, selectedWeek) {
   const activeWeekNum = parseInt((activeWeek || "").replace(/\D/g, ""), 10);
   const nextWeekLabel = `WK${activeWeekNum + 1}`;
 
-  const thisWeekEvts = events.filter(e => e.weekNum === activeWeek);
-  const nextWeekEvts = events.filter(e => e.weekNum === nextWeekLabel);
+  const thisWeekEvts = mergedEvents.filter(e => e.weekNum === activeWeek);
+  const nextWeekEvts = mergedEvents.filter(e => e.weekNum === nextWeekLabel);
 
   // Build leaderboard from sales data
   const thisWeekEventNames = new Set(thisWeekEvts.map(e => e.eventName.toLowerCase()));
