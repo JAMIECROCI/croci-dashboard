@@ -6,6 +6,10 @@ const WEATHER_ENABLED = OPENWEATHER_API_KEY !== "YOUR_API_KEY_HERE";
 const WEATHER_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 const USE_MOCK_DATA = true; // Set to false when real API is available
 
+// ── Password Protection ─────────────────────────────────────────────
+const PASSWORD_PROTECTED = true; // Set to false to disable password gate
+const SITE_PASSWORD = "CrociTeam2025"; // Change this to your desired password
+
 // ── Venue Coordinate Registry ────────────────────────────────────────
 const VENUE_COORDINATES = {
   "The O2 Arena, London": { lat: 51.5033, lng: 0.0032 },
@@ -729,6 +733,108 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
 };
 
 // ── Main Dashboard ───────────────────────────────────────────────────
+// ── Password Gate Component ──────────────────────────────────────────
+function PasswordGate({ children }) {
+  const [authenticated, setAuthenticated] = useState(() => {
+    return sessionStorage.getItem("croci_auth") === "true";
+  });
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(false);
+  const [shaking, setShaking] = useState(false);
+
+  if (!PASSWORD_PROTECTED || authenticated) return children;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (password === SITE_PASSWORD) {
+      sessionStorage.setItem("croci_auth", "true");
+      setAuthenticated(true);
+    } else {
+      setError(true);
+      setShaking(true);
+      setTimeout(() => setShaking(false), 500);
+      setPassword("");
+    }
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(180deg, #060a10 0%, #0a0f1a 40%, #080d16 100%)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontFamily: "'DM Sans', sans-serif",
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+      `}</style>
+      <div style={{
+        animation: shaking ? "shake 0.5s ease" : "fadeUp 0.6s ease",
+        textAlign: "center", padding: 40,
+        background: "linear-gradient(135deg, #0d111788, #0a0f1a88)",
+        border: "1px solid #1e293b", borderRadius: 20,
+        backdropFilter: "blur(20px)",
+        width: "100%", maxWidth: 400,
+      }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: 14, margin: "0 auto 20px",
+          background: "linear-gradient(135deg, #34d399, #059669)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 26, fontWeight: 700, color: "#000",
+          fontFamily: "'Playfair Display', serif",
+        }}>C</div>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#f1f5f9", margin: "0 0 4px" }}>
+          Croci Collective
+        </h1>
+        <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 28px", letterSpacing: 1.5, textTransform: "uppercase" }}>
+          Operations Portal
+        </p>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setError(false); }}
+            placeholder="Enter team password"
+            autoFocus
+            style={{
+              width: "100%", padding: "14px 18px",
+              background: "#0a0f1a", border: `1px solid ${error ? "#ef4444" : "#1e293b"}`,
+              borderRadius: 10, color: "#f1f5f9", fontSize: 14,
+              fontFamily: "'DM Sans', sans-serif",
+              outline: "none", transition: "border-color 0.2s ease",
+              marginBottom: 12,
+            }}
+            onFocus={(e) => { if (!error) e.target.style.borderColor = "#34d399"; }}
+            onBlur={(e) => { if (!error) e.target.style.borderColor = "#1e293b"; }}
+          />
+          {error && (
+            <p style={{ color: "#ef4444", fontSize: 12, margin: "0 0 12px" }}>
+              Incorrect password. Please try again.
+            </p>
+          )}
+          <button type="submit" style={{
+            width: "100%", padding: "14px 0",
+            background: "linear-gradient(135deg, #34d399, #059669)",
+            border: "none", borderRadius: 10,
+            color: "#000", fontSize: 14, fontWeight: 700,
+            fontFamily: "'DM Sans', sans-serif",
+            cursor: "pointer", transition: "opacity 0.2s ease",
+          }}
+            onMouseEnter={(e) => e.target.style.opacity = "0.9"}
+            onMouseLeave={(e) => e.target.style.opacity = "1"}
+          >
+            Access Dashboard
+          </button>
+        </form>
+        <p style={{ fontSize: 10, color: "#334155", margin: "20px 0 0" }}>
+          Internal use only. Contact your manager for access.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function CrociPortal() {
   const [activeCountry, setActiveCountry] = useState("United Kingdom");
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -770,6 +876,7 @@ export default function CrociPortal() {
     : ["Event", "Venue", "Date", "Status", "Sales", "Revenue", "Progress"];
 
   return (
+    <PasswordGate>
     <div style={{
       minHeight: "100vh",
       background: "linear-gradient(180deg, #060a10 0%, #0a0f1a 40%, #080d16 100%)",
@@ -1127,5 +1234,6 @@ export default function CrociPortal() {
         </div>
       </div>
     </div>
+    </PasswordGate>
   );
 }
