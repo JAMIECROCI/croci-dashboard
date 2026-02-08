@@ -1177,6 +1177,95 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
   );
 };
 
+// ── World Clocks Component ───────────────────────────────────────────
+function WorldClocks({ currentTime }) {
+  const zones = [
+    { city: "Los Angeles", tz: "America/Los_Angeles", abbr: "PT" },
+    { city: "New York", tz: "America/New_York", abbr: "ET" },
+    { city: "London", tz: "Europe/London", abbr: "GMT" },
+  ];
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+      {zones.map(({ city, tz, abbr }) => {
+        const localStr = currentTime.toLocaleString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", second: "2-digit", hour12: false });
+        const parts = localStr.split(":");
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const s = parseInt(parts[2], 10);
+        const hourDeg = ((h % 12) + m / 60) * 30;
+        const minDeg = (m + s / 60) * 6;
+        const secDeg = s * 6;
+        const size = 52;
+        const cx = size / 2;
+        const cy = size / 2;
+
+        function hand(length, deg, width, color, round) {
+          const rad = ((deg - 90) * Math.PI) / 180;
+          const x2 = cx + length * Math.cos(rad);
+          const y2 = cy + length * Math.sin(rad);
+          return (
+            <line x1={cx} y1={cy} x2={x2} y2={y2}
+              stroke={color} strokeWidth={width}
+              strokeLinecap={round ? "round" : "butt"}
+            />
+          );
+        }
+
+        // Hour markers
+        const markers = [];
+        for (let i = 0; i < 12; i++) {
+          const angle = ((i * 30 - 90) * Math.PI) / 180;
+          const outer = cx - 3;
+          const inner = i % 3 === 0 ? cx - 7 : cx - 5;
+          markers.push(
+            <line key={i}
+              x1={cx + inner * Math.cos(angle)} y1={cy + inner * Math.sin(angle)}
+              x2={cx + outer * Math.cos(angle)} y2={cy + outer * Math.sin(angle)}
+              stroke={i % 3 === 0 ? "#94a3b8" : "#334155"}
+              strokeWidth={i % 3 === 0 ? 1.5 : 0.8}
+              strokeLinecap="round"
+            />
+          );
+        }
+
+        const digitalTime = currentTime.toLocaleTimeString("en-US", {
+          timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: true,
+        });
+
+        return (
+          <div key={city} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={{
+              width: size, height: size, borderRadius: "50%",
+              background: "radial-gradient(circle at 40% 35%, #111827, #060a10)",
+              border: "1.5px solid #1e293b",
+              boxShadow: "0 0 12px rgba(52,211,153,0.06), inset 0 1px 2px rgba(255,255,255,0.03)",
+              position: "relative",
+            }}>
+              <svg width={size} height={size} style={{ position: "absolute", top: 0, left: 0 }}>
+                {markers}
+                {hand(14, hourDeg, 2.2, "#e2e8f0", true)}
+                {hand(19, minDeg, 1.5, "#94a3b8", true)}
+                {hand(20, secDeg, 0.6, "#34d399", false)}
+                <circle cx={cx} cy={cy} r={2} fill="#34d399" />
+                <circle cx={cx} cy={cy} r={0.8} fill="#060a10" />
+              </svg>
+            </div>
+            <div style={{ textAlign: "center", lineHeight: 1.2 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", letterSpacing: 0.5, fontFamily: "'DM Sans', sans-serif" }}>
+                {digitalTime}
+              </div>
+              <div style={{ fontSize: 8, color: "#475569", textTransform: "uppercase", letterSpacing: 1, fontFamily: "'DM Sans', sans-serif" }}>
+                {city}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Password Gate Component ──────────────────────────────────────────
 function PasswordGate({ children }) {
   const [authenticated, setAuthenticated] = useState(() => {
@@ -1222,16 +1311,17 @@ function PasswordGate({ children }) {
         width: "100%", maxWidth: 400,
       }}>
         <div style={{
-          width: 56, height: 56, borderRadius: 14, margin: "0 auto 20px",
+          width: 60, height: 60, borderRadius: 16, margin: "0 auto 20px",
           background: "linear-gradient(135deg, #34d399, #059669)",
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 26, fontWeight: 700, color: "#000",
+          fontSize: 28, fontWeight: 700, color: "#000",
           fontFamily: "'Playfair Display', serif",
+          boxShadow: "0 4px 20px rgba(52,211,153,0.3)",
         }}>C</div>
-        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 700, color: "#f1f5f9", margin: "0 0 4px" }}>
-          Croci Collective
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: "#f1f5f9", margin: "0 0 4px", letterSpacing: -0.3 }}>
+          Croci <span style={{ color: "#34d399" }}>Collective</span>
         </h1>
-        <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 28px", letterSpacing: 1.5, textTransform: "uppercase" }}>
+        <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 28px", letterSpacing: 2, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>
           Operations Portal
         </p>
         <form onSubmit={handleSubmit}>
@@ -1411,12 +1501,12 @@ export default function CrociPortal() {
 
       {/* ── Header ─────────────────────────────────────── */}
       <header style={{
-        padding: "20px clamp(16px, 3vw, 32px)",
+        padding: "16px clamp(16px, 3vw, 32px)",
         borderBottom: "1px solid #1e293b",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        background: "linear-gradient(90deg, #060a1088, #0d111788)",
+        background: "linear-gradient(90deg, #060a10ee, #0d1117ee)",
         backdropFilter: "blur(20px)",
         position: "sticky",
         top: 0,
@@ -1424,38 +1514,50 @@ export default function CrociPortal() {
         flexWrap: "wrap",
         gap: 12,
       }}>
+        {/* Left: Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{
-            width: 40, height: 40, borderRadius: 10,
+            width: 42, height: 42, borderRadius: 12,
             background: "linear-gradient(135deg, #34d399, #059669)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 20, fontWeight: 700, color: "#000",
+            fontSize: 22, fontWeight: 700, color: "#000",
             fontFamily: "'Playfair Display', serif",
+            boxShadow: "0 2px 12px rgba(52,211,153,0.25)",
           }}>C</div>
           <div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, margin: 0, color: "#f1f5f9" }}>
-              Croci Collective
+            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, margin: 0, color: "#f1f5f9", letterSpacing: -0.3 }}>
+              Croci <span style={{ color: "#34d399" }}>Collective</span>
             </h1>
-            <p style={{ fontSize: 11, color: "#64748b", margin: 0, letterSpacing: 1.5, textTransform: "uppercase" }}>Operations Portal</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+              <p style={{ fontSize: 10, color: "#64748b", margin: 0, letterSpacing: 1.8, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>Operations Portal</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399", animation: "pulse 1.5s infinite" }} />
+                <span style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>LIVE</span>
+              </div>
+            </div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <NotificationBell unreadCount={unreadCount} onClick={(e) => { e.stopPropagation(); setNotifOpen(prev => !prev); }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34d399", animation: "pulse 1.5s infinite" }} />
-            <span style={{ fontSize: 12, color: "#34d399", fontWeight: 600 }}>LIVE</span>
-          </div>
-          {!USE_MOCK_DATA && lastUpdated && (
-            <div style={{ fontSize: 11, color: "#64748b" }}>
-              Updated {timeAgo(lastUpdated)}
-            </div>
-          )}
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 18, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", color: "#f1f5f9", fontVariantNumeric: "tabular-nums" }}>
-              {currentTime.toLocaleTimeString("en-GB")}
-            </div>
-            <div style={{ fontSize: 11, color: "#64748b" }}>
-              {currentTime.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+
+        {/* Center-Right: World Clocks */}
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          <WorldClocks currentTime={currentTime} />
+
+          {/* Divider */}
+          <div style={{ width: 1, height: 48, background: "linear-gradient(180deg, transparent, #1e293b, transparent)" }} />
+
+          {/* Right: Status + Date */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <NotificationBell unreadCount={unreadCount} onClick={(e) => { e.stopPropagation(); setNotifOpen(prev => !prev); }} />
+            {!USE_MOCK_DATA && lastUpdated && (
+              <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.3, textAlign: "center" }}>
+                <div style={{ color: "#64748b", fontWeight: 500 }}>Updated</div>
+                <div>{timeAgo(lastUpdated)}</div>
+              </div>
+            )}
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", fontFamily: "'DM Sans', sans-serif" }}>
+                {currentTime.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              </div>
             </div>
           </div>
         </div>
