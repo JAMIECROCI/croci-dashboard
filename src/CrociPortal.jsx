@@ -4,14 +4,19 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 const OPENWEATHER_API_KEY = "YOUR_API_KEY_HERE"; // Replace with your OpenWeatherMap API key
 const WEATHER_ENABLED = OPENWEATHER_API_KEY !== "YOUR_API_KEY_HERE";
 const WEATHER_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
-const USE_MOCK_DATA = true; // Set to false when real API is available
+const USE_MOCK_DATA = false; // Set to true to use generated demo data
+
+// ── Google Sheets Configuration ──────────────────────────────────────
+const MASTER_TRACKER_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSfQ_GG1qM6ZsP2No7yQKRVmtb6UjccbcXp--jOIHEUC0bYUaN4opouQBixctbC6G-XVGZfGA28yIZ1/pub?gid=1256054786&single=true&output=csv";
+const SALES_ENTRIES_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTd-lneum3ekG7RcjlQX9tzk2SfYlCzXz0rDbZvYNm9uI_gRmbMXAeAd3TefiabeRl5TaeqWg6VHRs5/pub?gid=250023368&single=true&output=csv";
+const REFRESH_INTERVAL = 2.5 * 60 * 1000; // 2.5 minutes
 
 // ── Password Protection ─────────────────────────────────────────────
-const PASSWORD_PROTECTED = true; // Set to false to disable password gate
-const SITE_PASSWORD = "CrociTeam2025"; // Change this to your desired password
+const PASSWORD_PROTECTED = true;
+const SITE_PASSWORD = "CrociTeam2025";
 
-// ── Venue Coordinate Registry ────────────────────────────────────────
-const VENUE_COORDINATES = {
+// ── Venue Coordinate Registry (Mock) ─────────────────────────────────
+const VENUE_COORDINATES_MOCK = {
   "The O2 Arena, London": { lat: 51.5033, lng: 0.0032 },
   "Manchester Central": { lat: 53.4762, lng: -2.2467 },
   "NEC Birmingham": { lat: 52.4539, lng: -1.7246 },
@@ -31,8 +36,62 @@ const VENUE_COORDINATES = {
   "Boston Convention Center": { lat: 42.3456, lng: -71.0446 },
 };
 
+// ── Venue Coordinates (Live US Data) ─────────────────────────────────
+const VENUE_COORDINATES_LIVE = {
+  "I-X Center": { lat: 41.4120, lng: -81.7385 },
+  "Huntington Convention Center of Cleveland": { lat: 41.4993, lng: -81.6944 },
+  "Charlotte Convention Center": { lat: 35.2208, lng: -80.8439 },
+  "Connecticut Convention Center": { lat: 41.7668, lng: -72.6734 },
+  "Ohio State Fairgrounds": { lat: 40.0076, lng: -82.9988 },
+  "Kentucky Exposition Center": { lat: 38.1941, lng: -85.7415 },
+  "Boston Convention & Exhibition Center": { lat: 42.3456, lng: -71.0446 },
+  "Vale Fieldhouse": { lat: 41.7658, lng: -72.6734 },
+  "Northern Kentucky Convention Center": { lat: 39.0812, lng: -84.5085 },
+  "Pennsylvania Convention Center": { lat: 39.9546, lng: -75.1593 },
+  "Meadowlands Expo Center": { lat: 40.7863, lng: -74.0712 },
+  "Donald E. Stephens Convention Center": { lat: 41.9773, lng: -87.8603 },
+  "Greater Philadelphia Expo Center @ Oaks": { lat: 40.1318, lng: -75.4518 },
+  "Indiana State Fairgrounds": { lat: 39.8271, lng: -86.1185 },
+  "Greater Fort Lauderdale Broward County Convention Center": { lat: 26.0985, lng: -80.1261 },
+  "Dulles Expo Center": { lat: 38.9565, lng: -77.4483 },
+  "Georgia World Congress Center": { lat: 33.7590, lng: -84.3957 },
+  "Ocean Center": { lat: 29.2117, lng: -81.0239 },
+  "New Jersey Convention & Expo Center": { lat: 40.6584, lng: -74.1760 },
+  "Suburban Collection Showplace": { lat: 42.5252, lng: -83.3644 },
+  "Devos Place": { lat: 42.9664, lng: -85.6781 },
+  "Kalamazoo County Expo Center": { lat: 42.2756, lng: -85.5720 },
+  "Monroeville Convention Center": { lat: 40.4278, lng: -79.7612 },
+  "Walter E Washington Convention Center": { lat: 38.9029, lng: -77.0228 },
+  "Greater Columbus Convention Center": { lat: 39.9712, lng: -82.9961 },
+  "Miami Beach Convention Center": { lat: 25.7954, lng: -80.1340 },
+  "Tampa Convention Center": { lat: 27.9428, lng: -82.4580 },
+  "Javits Center": { lat: 40.7575, lng: -74.0021 },
+};
+
+// ── US State Center Coordinates (fallback) ──────────────────────────
+const STATE_COORDINATES = {
+  OH: { lat: 40.42, lng: -82.91 }, FL: { lat: 27.66, lng: -81.52 },
+  NC: { lat: 35.76, lng: -79.02 }, VA: { lat: 37.43, lng: -78.66 },
+  CT: { lat: 41.60, lng: -72.76 }, PA: { lat: 41.20, lng: -77.19 },
+  NJ: { lat: 40.06, lng: -74.41 }, NY: { lat: 42.17, lng: -74.95 },
+  IL: { lat: 40.63, lng: -89.40 }, IN: { lat: 40.27, lng: -86.13 },
+  KY: { lat: 37.84, lng: -84.27 }, MA: { lat: 42.41, lng: -71.38 },
+  GA: { lat: 33.75, lng: -84.39 }, CA: { lat: 36.78, lng: -119.42 },
+  MI: { lat: 44.31, lng: -84.36 }, MD: { lat: 39.05, lng: -76.64 },
+  TX: { lat: 31.97, lng: -99.90 }, DC: { lat: 38.91, lng: -77.04 },
+  WI: { lat: 43.78, lng: -88.79 }, MN: { lat: 46.73, lng: -94.69 },
+  TN: { lat: 35.52, lng: -86.58 }, SC: { lat: 33.84, lng: -81.16 },
+  CO: { lat: 39.55, lng: -105.78 }, AZ: { lat: 34.05, lng: -111.09 },
+  WA: { lat: 47.75, lng: -120.74 }, OR: { lat: 43.80, lng: -120.55 },
+  MO: { lat: 38.57, lng: -92.60 }, AL: { lat: 32.32, lng: -86.90 },
+  LA: { lat: 30.98, lng: -91.96 }, NV: { lat: 38.80, lng: -116.42 },
+};
+
+const ALL_VENUE_COORDINATES = { ...VENUE_COORDINATES_MOCK, ...VENUE_COORDINATES_LIVE };
+
 // ── Mock Data Constants ──────────────────────────────────────────────
 const COUNTRIES = ["United Kingdom", "Ireland", "United States"];
+const ACTIVE_COUNTRIES = USE_MOCK_DATA ? COUNTRIES : ["United States"];
 const CAMPAIGNS = ["Spring Wellness Push", "Summer Box Blitz", "Pet Nutrition Drive", "Starter Kit Promo"];
 const PRODUCTS = {
   feedingPlans: ["Puppy Growth Plan", "Adult Maintenance", "Senior Vitality", "Weight Management", "Raw Boost"],
@@ -65,7 +124,290 @@ function timeAgo(date) {
   return `${hours}h ago`;
 }
 
-// ── Data Generators ──────────────────────────────────────────────────
+// ── CSV Parser (RFC 4180 compliant) ──────────────────────────────────
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const next = text[i + 1];
+    if (inQuotes) {
+      if (ch === '"' && next === '"') { cell += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { cell += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ",") { row.push(cell.trim()); cell = ""; }
+      else if (ch === "\n" || (ch === "\r" && next === "\n")) {
+        row.push(cell.trim()); rows.push(row); row = []; cell = "";
+        if (ch === "\r") i++;
+      } else if (ch === "\r") {
+        row.push(cell.trim()); rows.push(row); row = []; cell = "";
+      } else { cell += ch; }
+    }
+  }
+  if (cell || row.length) { row.push(cell.trim()); rows.push(row); }
+  return rows;
+}
+
+// ── Date & Number Parsing Helpers ────────────────────────────────────
+const MONTH_MAP = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
+
+function parseMasterDate(str) {
+  if (!str || typeof str !== "string") return null;
+  const parts = str.trim().split(/\s+/);
+  if (parts.length < 3) return null;
+  const day = parseInt(parts[1], 10);
+  const month = MONTH_MAP[parts[2]];
+  if (month === undefined || isNaN(day)) return null;
+  return new Date(2026, month, day);
+}
+
+function parseSalesDate(str) {
+  if (!str) return null;
+  const parts = str.split("-");
+  if (parts.length !== 3) return null;
+  const [mm, dd, yyyy] = parts.map(Number);
+  if (!mm || !dd || !yyyy) return null;
+  return new Date(yyyy, mm - 1, dd);
+}
+
+function parseNumber(str) {
+  if (!str) return 0;
+  const cleaned = String(str).replace(/[^0-9.\-]/g, "");
+  return parseFloat(cleaned) || 0;
+}
+
+function parseCurrency(str) {
+  if (!str) return 0;
+  const cleaned = String(str).replace(/[$,\s]/g, "");
+  return parseFloat(cleaned) || 0;
+}
+
+function getWeekMonday(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function getWeekSunday(monday) {
+  const d = new Date(monday);
+  d.setDate(d.getDate() + 6);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+function extractStateAbbrev(stateStr) {
+  if (!stateStr) return null;
+  const match = stateStr.match(/[A-Z]{2}/);
+  return match ? match[0] : null;
+}
+
+function formatDateForSales(date) {
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${mm}-${dd}-${date.getFullYear()}`;
+}
+
+// ── Process Google Sheets Data ───────────────────────────────────────
+function processData(masterRows, salesRows, selectedWeek) {
+  // Parse Master Tracker — skip first 3 blank/header rows, row 3 is the real header
+  const masterData = masterRows.slice(4);
+
+  const events = masterData
+    .filter(row => {
+      if (!row || row.length < 17) return false;
+      const bookingStatus = (row[2] || "").trim().toUpperCase();
+      const eventName = (row[11] || "").trim();
+      if (bookingStatus !== "BOOKED") return false;
+      if (!eventName || eventName.toUpperCase().includes("WEEK BREAK")) return false;
+      return true;
+    })
+    .map((row, index) => ({
+      id: `event-${index}`,
+      client: (row[3] || "").trim(),
+      weekNum: (row[4] || "").trim(),
+      month: (row[5] || "").trim(),
+      startDate: parseMasterDate(row[6]),
+      endDate: parseMasterDate(row[7]),
+      startDateRaw: (row[6] || "").trim(),
+      endDateRaw: (row[7] || "").trim(),
+      liveDays: parseNumber(row[8]),
+      eventType: (row[10] || "").trim(),
+      eventName: (row[11] || "").trim(),
+      location: (row[12] || "").trim(),
+      state: (row[13] || "").trim(),
+      salesTarget: parseNumber(row[15]),
+      masterSales: parseNumber(row[16]),
+      expectedStaff: parseNumber(row[20]),
+      totalUpfronts: parseCurrency(row[36]),
+      country: "United States",
+    }));
+
+  // Parse Sales Entries — skip 2 header rows
+  const salesData = salesRows.slice(2)
+    .filter(row => row && row.length >= 7)
+    .map(row => {
+      const agentField = (row[1] || "").trim();
+      const agentParts = agentField.split(/\t/);
+      return {
+        date: parseSalesDate(row[0]),
+        dateRaw: (row[0] || "").trim(),
+        agentCode: (agentParts[0] || "").trim(),
+        agentName: (agentParts[1] || agentParts[0] || "Unknown").trim(),
+        eventName: (row[2] || "").trim(),
+        paymentCompleted: (row[6] || "").trim().toUpperCase(),
+      };
+    })
+    .filter(s => s.paymentCompleted === "YES" && s.date);
+
+  // Group sales by event name (case-insensitive)
+  const salesByEvent = {};
+  salesData.forEach(sale => {
+    const key = sale.eventName.toLowerCase();
+    if (!salesByEvent[key]) salesByEvent[key] = [];
+    salesByEvent[key].push(sale);
+  });
+
+  // Join: compute live stats for each event
+  events.forEach(event => {
+    const key = event.eventName.toLowerCase();
+    const eventSales = salesByEvent[key] || [];
+    event.liveSalesCount = eventSales.length;
+    event.uniqueAgents = new Set(eventSales.map(s => s.agentCode)).size;
+    event.staffFraction = `${event.uniqueAgents} / ${event.expectedStaff || "?"}`;
+    event.cpa = event.liveSalesCount > 0 ? (event.totalUpfronts / event.liveSalesCount) : null;
+  });
+
+  // Determine available weeks
+  const weekNums = [...new Set(events.map(e => e.weekNum).filter(Boolean))];
+  weekNums.sort((a, b) => {
+    const numA = parseInt(a.replace(/\D/g, ""), 10);
+    const numB = parseInt(b.replace(/\D/g, ""), 10);
+    return numA - numB;
+  });
+
+  // Determine current week by date overlap
+  const today = new Date();
+  const currentMonday = getWeekMonday(today);
+  const currentSunday = getWeekSunday(currentMonday);
+  let currentWeek = null;
+  for (const event of events) {
+    if (event.startDate && event.endDate) {
+      if (event.startDate <= currentSunday && event.endDate >= currentMonday) {
+        currentWeek = event.weekNum;
+        break;
+      }
+    }
+  }
+
+  const activeWeek = selectedWeek || currentWeek || weekNums[weekNums.length - 1] || "WK1";
+  const activeWeekNum = parseInt((activeWeek || "").replace(/\D/g, ""), 10);
+  const nextWeekLabel = `WK${activeWeekNum + 1}`;
+
+  const thisWeekEvts = events.filter(e => e.weekNum === activeWeek);
+  const nextWeekEvts = events.filter(e => e.weekNum === nextWeekLabel);
+
+  // Build leaderboard from sales data
+  const thisWeekEventNames = new Set(thisWeekEvts.map(e => e.eventName.toLowerCase()));
+  const weekSalesForLeaderboard = salesData.filter(s =>
+    thisWeekEventNames.has(s.eventName.toLowerCase())
+  );
+
+  const todayStr = formatDateForSales(today);
+  const todaySalesForLeaderboard = weekSalesForLeaderboard.filter(s => s.dateRaw === todayStr);
+
+  function buildLeaderboard(salesList) {
+    const byEvent = {};
+    salesList.forEach(sale => {
+      if (!byEvent[sale.eventName]) byEvent[sale.eventName] = {};
+      if (!byEvent[sale.eventName][sale.agentName]) {
+        byEvent[sale.eventName][sale.agentName] = 0;
+      }
+      byEvent[sale.eventName][sale.agentName]++;
+    });
+
+    return Object.entries(byEvent).map(([eventName, agents]) => ({
+      campaign: eventName,
+      top3: Object.entries(agents)
+        .map(([name, sales]) => ({ name, sales, revenue: 0, conversionRate: 0, rank: 0 }))
+        .sort((a, b) => b.sales - a.sales)
+        .slice(0, 3)
+        .map((p, i) => ({ ...p, rank: i + 1 })),
+    }));
+  }
+
+  const dailyLeaderboard = buildLeaderboard(todaySalesForLeaderboard);
+  const weeklyLeaderboard = buildLeaderboard(weekSalesForLeaderboard);
+
+  // Transform events to dashboard shape
+  function toEventShape(event) {
+    let status = "upcoming";
+    if (event.startDate && event.endDate) {
+      if (today >= event.startDate && today <= event.endDate) status = "live";
+      else if (today > event.endDate) status = "completed";
+    }
+
+    return {
+      id: event.id,
+      name: event.eventName,
+      venue: event.location,
+      location: event.location,
+      state: event.state,
+      date: `${event.startDateRaw} - ${event.endDateRaw}`,
+      rawDate: event.startDate || new Date(),
+      ticketsSold: event.liveSalesCount,
+      revenue: event.totalUpfronts,
+      target: event.salesTarget,
+      status,
+      campaign: event.client,
+      country: "United States",
+      staffFraction: event.staffFraction,
+      uniqueAgents: event.uniqueAgents,
+      expectedStaff: event.expectedStaff,
+      cpa: event.cpa,
+      totalUpfronts: event.totalUpfronts,
+      salesTarget: event.salesTarget,
+      masterSales: event.masterSales,
+      weekNum: event.weekNum,
+      eventType: event.eventType,
+    };
+  }
+
+  // Build recent sales for live ticker
+  const recentSales = salesData
+    .sort((a, b) => (b.date || 0) - (a.date || 0))
+    .slice(0, 20)
+    .map((sale, i) => ({
+      id: `sale-${i}-${sale.dateRaw}`,
+      eventName: sale.eventName,
+      venue: sale.eventName,
+      agentName: sale.agentName,
+      product: sale.agentName,
+      amount: 0,
+      time: sale.dateRaw,
+    }));
+
+  return {
+    data: {
+      thisWeekEvents: { "United States": thisWeekEvts.map(toEventShape) },
+      nextWeekEvents: { "United States": nextWeekEvts.map(toEventShape) },
+      dailySales: { "United States": dailyLeaderboard },
+      weeklySales: { "United States": weeklyLeaderboard },
+      campaignBreakdown: [],
+    },
+    availableWeeks: weekNums,
+    currentWeek: currentWeek || weekNums[weekNums.length - 1] || "WK1",
+    recentSales,
+  };
+}
+
+// ── Data Generators (Mock) ───────────────────────────────────────────
 function generateEvents(country, count, weekOffset = 0) {
   const venueList = VENUES[country];
   const baseDate = new Date();
@@ -110,19 +452,11 @@ function generateCampaignBreakdown() {
   return CAMPAIGNS.map(campaign => ({
     campaign,
     products: PRODUCTS.feedingPlans.map(plan => ({
-      name: plan,
-      type: "Feeding Plan",
-      unitsSold: randInt(20, 400),
-      revenue: randInt(1400, 28000),
-      avgOrderValue: randFloat(28, 120),
-      returnRate: randFloat(0.5, 6),
+      name: plan, type: "Feeding Plan", unitsSold: randInt(20, 400),
+      revenue: randInt(1400, 28000), avgOrderValue: randFloat(28, 120), returnRate: randFloat(0.5, 6),
     })).concat(PRODUCTS.boxTypes.map(box => ({
-      name: box,
-      type: "Box Type",
-      unitsSold: randInt(15, 320),
-      revenue: randInt(900, 22000),
-      avgOrderValue: randFloat(18, 95),
-      returnRate: randFloat(0.8, 5),
+      name: box, type: "Box Type", unitsSold: randInt(15, 320),
+      revenue: randInt(900, 22000), avgOrderValue: randFloat(18, 95), returnRate: randFloat(0.8, 5),
     }))),
     totalRevenue: randInt(12000, 80000),
     totalUnits: randInt(200, 2400),
@@ -144,6 +478,7 @@ function generateLiveSale(events) {
 }
 
 function generateNotification(events, salesData) {
+  const currencySymbol = USE_MOCK_DATA ? "\u00a3" : "$";
   const templates = [
     () => {
       const liveEvts = events.flat().filter(e => e.status === "live");
@@ -167,16 +502,16 @@ function generateNotification(events, salesData) {
       const liveEvts = events.flat().filter(e => e.status === "live");
       const event = liveEvts.length ? pick(liveEvts) : null;
       if (!event) return null;
-      const pct = Math.round((event.ticketsSold / event.target) * 100);
+      const pct = event.target > 0 ? Math.round((event.ticketsSold / event.target) * 100) : 0;
       if (pct > 80) return { type: "milestone", message: `${event.venue} is at ${pct}% of target!` };
-      if (pct < 30) return { type: "warning", message: `${event.venue} only at ${pct}% of target — needs attention` };
+      if (pct < 30) return { type: "warning", message: `${event.venue} only at ${pct}% of target \u2014 needs attention` };
       return { type: "info", message: `${event.venue} currently at ${pct}% of daily target` };
     },
     () => {
       const liveEvts = events.flat().filter(e => e.status === "live");
       if (!liveEvts.length) return null;
       const totalRev = liveEvts.reduce((s, e) => s + e.revenue, 0);
-      return { type: "info", message: `Total live revenue across all events: £${totalRev.toLocaleString()}` };
+      return { type: "info", message: `Total live upfronts across all events: ${currencySymbol}${totalRev.toLocaleString()}` };
     },
   ];
 
@@ -184,12 +519,7 @@ function generateNotification(events, salesData) {
   const result = template();
   if (!result) return null;
 
-  return {
-    id: Date.now() + Math.random(),
-    ...result,
-    timestamp: new Date(),
-    read: false,
-  };
+  return { id: Date.now() + Math.random(), ...result, timestamp: new Date(), read: false };
 }
 
 // ── Notification Types ───────────────────────────────────────────────
@@ -216,12 +546,71 @@ function useStableData() {
   return { data: dataRef.current, loading: false, error: null };
 }
 
+function useGoogleSheetsData() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [availableWeeks, setAvailableWeeks] = useState([]);
+  const [selectedWeek, setSelectedWeek] = useState(null);
+  const [currentWeek, setCurrentWeek] = useState(null);
+  const [recentSales, setRecentSales] = useState([]);
+  const isFirstFetch = useRef(true);
+
+  const fetchData = useCallback(async () => {
+    if (USE_MOCK_DATA) return;
+    try {
+      if (isFirstFetch.current) setLoading(true);
+
+      const [masterRes, salesRes] = await Promise.all([
+        fetch(MASTER_TRACKER_URL),
+        fetch(SALES_ENTRIES_URL),
+      ]);
+
+      if (!masterRes.ok) throw new Error(`Master tracker: HTTP ${masterRes.status}`);
+      if (!salesRes.ok) throw new Error(`Sales entries: HTTP ${salesRes.status}`);
+
+      const masterText = await masterRes.text();
+      const salesText = await salesRes.text();
+
+      const masterRows = parseCSV(masterText);
+      const salesRows = parseCSV(salesText);
+
+      const processed = processData(masterRows, salesRows, selectedWeek);
+
+      setData(processed.data);
+      setAvailableWeeks(processed.availableWeeks);
+      setCurrentWeek(processed.currentWeek);
+      if (!selectedWeek) setSelectedWeek(processed.currentWeek);
+      setRecentSales(processed.recentSales);
+      setLastUpdated(new Date());
+      setError(null);
+      isFirstFetch.current = false;
+    } catch (err) {
+      setError(err.message);
+      isFirstFetch.current = false;
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedWeek]);
+
+  useEffect(() => {
+    if (USE_MOCK_DATA) return;
+    fetchData();
+    const interval = setInterval(fetchData, REFRESH_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  return { data, loading, error, lastUpdated, availableWeeks, selectedWeek, setSelectedWeek, currentWeek, recentSales };
+}
+
 function useLiveSales(thisWeekEvents) {
   const [liveSales, setLiveSales] = useState([]);
   const eventsRef = useRef(thisWeekEvents);
   eventsRef.current = thisWeekEvents;
 
   useEffect(() => {
+    if (!USE_MOCK_DATA) return; // Only generate fake sales in mock mode
     const interval = setInterval(() => {
       const allEvents = Object.values(eventsRef.current);
       const sale = generateLiveSale(allEvents);
@@ -297,8 +686,11 @@ function useWeatherData(venues) {
           continue;
         }
 
-        const coords = VENUE_COORDINATES[venue];
-        if (!coords) continue;
+        const coords = ALL_VENUE_COORDINATES[venue];
+        if (!coords) {
+          // Try state fallback
+          continue;
+        }
 
         try {
           const response = await fetch(
@@ -372,7 +764,7 @@ const StatusBadge = ({ status }) => {
 };
 
 const ProgressBar = ({ value, max, color = "#34d399" }) => {
-  const pct = Math.min((value / max) * 100, 100);
+  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   return (
     <div style={{ width: "100%", height: 6, background: "#1a1a2e", borderRadius: 3, overflow: "hidden" }}>
       <div style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, ${color}, ${color}88)`, borderRadius: 3, transition: "width 0.6s ease" }} />
@@ -419,8 +811,9 @@ const Card = ({ children, style = {}, accentColor }) => (
   </div>
 );
 
-const LiveSaleTicker = ({ sales }) => {
+const LiveSaleTicker = ({ sales, isLive }) => {
   if (!sales.length) return null;
+  const currencySymbol = USE_MOCK_DATA ? "\u00a3" : "$";
   return (
     <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8, position: "relative" }}>
       {sales.slice(0, 8).map((sale, i) => (
@@ -429,12 +822,24 @@ const LiveSaleTicker = ({ sales }) => {
           border: "1px solid #34d39922", borderRadius: 10, animation: i === 0 ? "slideIn 0.4s ease" : "none",
           flexShrink: 0,
         }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-            <span style={{ color: "#34d399", fontSize: 15, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>£{sale.amount.toFixed(2)}</span>
-            <span style={{ color: "#475569", fontSize: 10 }}>{sale.time}</span>
-          </div>
-          <div style={{ color: "#94a3b8", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>{sale.product}</div>
-          <div style={{ color: "#475569", fontSize: 10, marginTop: 2 }}>{sale.venue}</div>
+          {USE_MOCK_DATA ? (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <span style={{ color: "#34d399", fontSize: 15, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>{currencySymbol}{sale.amount.toFixed(2)}</span>
+                <span style={{ color: "#475569", fontSize: 10 }}>{sale.time}</span>
+              </div>
+              <div style={{ color: "#94a3b8", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>{sale.product}</div>
+              <div style={{ color: "#475569", fontSize: 10, marginTop: 2 }}>{sale.venue}</div>
+            </>
+          ) : (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <span style={{ color: "#34d399", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>{sale.agentName || sale.product}</span>
+                <span style={{ color: "#475569", fontSize: 10 }}>{sale.time}</span>
+              </div>
+              <div style={{ color: "#94a3b8", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>{sale.eventName}</div>
+            </>
+          )}
         </div>
       ))}
     </div>
@@ -589,14 +994,17 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
     if (!leafletLoaded || !mapRef.current || mapInstanceRef.current) return;
     const L = window.L;
 
+    const defaultCenter = USE_MOCK_DATA ? [48.0, -10.0] : [39.8, -98.5];
+    const defaultZoom = USE_MOCK_DATA ? 3 : 4;
+
     const map = L.map(mapRef.current, {
       zoomControl: true,
       scrollWheelZoom: true,
       attributionControl: true,
-    }).setView([48.0, -10.0], 3);
+    }).setView(defaultCenter, defaultZoom);
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: "© OSM © CARTO",
+      attribution: "\u00a9 OSM \u00a9 CARTO",
       maxZoom: 19,
     }).addTo(map);
 
@@ -622,8 +1030,17 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
       "United States": "#f59e0b",
     };
 
+    const currencySymbol = USE_MOCK_DATA ? "\u00a3" : "$";
+
     events.forEach(event => {
-      const coords = VENUE_COORDINATES[event.venue];
+      let coords = ALL_VENUE_COORDINATES[event.venue];
+
+      // Fallback: try state abbreviation
+      if (!coords && event.state) {
+        const abbrev = extractStateAbbrev(event.state);
+        if (abbrev) coords = STATE_COORDINATES[abbrev];
+      }
+
       if (!coords) return;
 
       const statusColor = {
@@ -642,19 +1059,19 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
       }).addTo(map);
 
       const statusLabel = event.status.charAt(0).toUpperCase() + event.status.slice(1);
-      const statusDot = event.status === "live" ? '<span style="color:#34d399">●</span>' : event.status === "upcoming" ? '<span style="color:#a78bfa">●</span>' : '<span style="color:#64748b">●</span>';
+      const statusDot = event.status === "live" ? '<span style="color:#34d399">\u25cf</span>' : event.status === "upcoming" ? '<span style="color:#a78bfa">\u25cf</span>' : '<span style="color:#64748b">\u25cf</span>';
 
       marker.bindPopup(
         `<div style="font-family:'DM Sans',sans-serif;min-width:180px">
           <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#f1f5f9">${event.name}</div>
-          <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">📍 ${event.venue}</div>
-          <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">📆 ${event.date}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">\ud83d\udccd ${event.venue}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">\ud83d\udcc6 ${event.date}</div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <span style="font-size:11px">${statusDot} ${statusLabel}</span>
           </div>
           <div style="display:flex;justify-content:space-between;border-top:1px solid #1e293b;padding-top:6px;margin-top:4px">
             <span style="font-size:12px;color:#60a5fa;font-weight:600">${event.ticketsSold} sales</span>
-            <span style="font-size:12px;color:#34d399;font-weight:600">£${event.revenue.toLocaleString()}</span>
+            <span style="font-size:12px;color:#34d399;font-weight:600">${currencySymbol}${event.revenue.toLocaleString()}</span>
           </div>
         </div>`,
         { className: "croci-popup" }
@@ -709,17 +1126,6 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#64748b", display: "inline-block" }} /> Completed
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11, color: "#475569", marginLeft: "auto" }}>
-          <span>Border: </span>
-          {COUNTRIES.map(c => {
-            const cc = { "United Kingdom": "#60a5fa", "Ireland": "#34d399", "United States": "#f59e0b" };
-            return (
-              <span key={c} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 12, height: 3, background: cc[c], display: "inline-block", borderRadius: 2 }} /> {FLAGS[c]}
-              </span>
-            );
-          })}
-        </div>
       </div>
       <div ref={mapRef} style={{
         width: "100%",
@@ -732,7 +1138,6 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
   );
 };
 
-// ── Main Dashboard ───────────────────────────────────────────────────
 // ── Password Gate Component ──────────────────────────────────────────
 function PasswordGate({ children }) {
   const [authenticated, setAuthenticated] = useState(() => {
@@ -835,16 +1240,29 @@ function PasswordGate({ children }) {
   );
 }
 
+// ── Main Dashboard ───────────────────────────────────────────────────
 export default function CrociPortal() {
-  const [activeCountry, setActiveCountry] = useState("United Kingdom");
+  const [activeCountry, setActiveCountry] = useState("United States");
   const [currentTime, setCurrentTime] = useState(new Date());
   const [expandedCampaign, setExpandedCampaign] = useState(null);
   const [notifOpen, setNotifOpen] = useState(false);
 
-  const { data } = useStableData();
-  const { thisWeekEvents, nextWeekEvents, dailySales, weeklySales, campaignBreakdown } = data;
+  // Data hooks — both always called (React rules), only one used
+  const mockResult = useStableData();
+  const sheetsResult = useGoogleSheetsData();
+
+  const activeResult = USE_MOCK_DATA ? mockResult : sheetsResult;
+  const { data, loading: sheetsLoading, error: sheetsError, lastUpdated, availableWeeks, selectedWeek, setSelectedWeek, currentWeek, recentSales } = {
+    ...sheetsResult,
+    ...activeResult,
+    data: activeResult.data,
+  };
+
+  const { thisWeekEvents = {}, nextWeekEvents = {}, dailySales = {}, weeklySales = {}, campaignBreakdown = [] } = data || {};
 
   const liveSales = useLiveSales(thisWeekEvents);
+  const displaySales = USE_MOCK_DATA ? liveSales : (recentSales || []);
+
   const { notifications, unreadCount, markAllRead, markRead } = useNotifications(thisWeekEvents, dailySales);
   const { leafletLoaded, leafletError } = useLeafletLoader();
 
@@ -867,13 +1285,57 @@ export default function CrociPortal() {
     return () => clearInterval(t);
   }, []);
 
+  const currencySymbol = USE_MOCK_DATA ? "\u00a3" : "$";
   const totalRevToday = Object.values(thisWeekEvents).flat().reduce((s, e) => s + e.revenue, 0);
   const totalSalesToday = Object.values(thisWeekEvents).flat().reduce((s, e) => s + e.ticketsSold, 0);
   const liveCount = Object.values(thisWeekEvents).flat().filter(e => e.status === "live").length;
 
-  const thisWeekHeaders = WEATHER_ENABLED
-    ? ["Event", "Venue", "Date", "Weather", "Status", "Sales", "Revenue", "Progress"]
-    : ["Event", "Venue", "Date", "Status", "Sales", "Revenue", "Progress"];
+  const thisWeekHeaders = USE_MOCK_DATA
+    ? (WEATHER_ENABLED
+      ? ["Event", "Venue", "Date", "Weather", "Status", "Sales", "Revenue", "Progress"]
+      : ["Event", "Venue", "Date", "Status", "Sales", "Revenue", "Progress"])
+    : ["Event", "Location", "State", "Dates", "Status", "Sales / Target", "Staff", "CPA"];
+
+  const kpis = USE_MOCK_DATA
+    ? [
+        { label: "Live Events", value: liveCount, color: "#34d399", icon: "📡" },
+        { label: "Sales Today", value: totalSalesToday.toLocaleString(), color: "#60a5fa", icon: "🛒" },
+        { label: "Revenue Today", value: `${currencySymbol}${totalRevToday.toLocaleString()}`, color: "#f59e0b", icon: "💰" },
+        { label: "Active Countries", value: COUNTRIES.length, color: "#a78bfa", icon: "🌍" },
+      ]
+    : [
+        { label: "Live Events", value: liveCount, color: "#34d399", icon: "📡" },
+        { label: "Total Sales (Week)", value: totalSalesToday.toLocaleString(), color: "#60a5fa", icon: "🛒" },
+        { label: "Total Upfronts", value: `$${totalRevToday.toLocaleString()}`, color: "#f59e0b", icon: "💰" },
+        { label: "Events This Week", value: (thisWeekEvents["United States"] || []).length, color: "#a78bfa", icon: "📋" },
+      ];
+
+  // Loading state for live data
+  if (!USE_MOCK_DATA && sheetsLoading && !data) {
+    return (
+      <PasswordGate>
+        <div style={{
+          minHeight: "100vh",
+          background: "linear-gradient(180deg, #060a10 0%, #0a0f1a 40%, #080d16 100%)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ width: 56, height: 56, borderRadius: 14, margin: "0 auto 20px",
+              background: "linear-gradient(135deg, #34d399, #059669)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 26, fontWeight: 700, color: "#000",
+              fontFamily: "'Playfair Display', serif",
+            }}>C</div>
+            <p style={{ color: "#64748b", fontSize: 14 }}>Loading live data from Google Sheets...</p>
+            <div style={{ width: 200, height: 4, background: "#1e293b", borderRadius: 2, margin: "16px auto", overflow: "hidden" }}>
+              <div style={{ width: "40%", height: "100%", background: "#34d399", borderRadius: 2, animation: "shimmer 1.5s infinite" }} />
+            </div>
+          </div>
+        </div>
+      </PasswordGate>
+    );
+  }
 
   return (
     <PasswordGate>
@@ -944,6 +1406,11 @@ export default function CrociPortal() {
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34d399", animation: "pulse 1.5s infinite" }} />
             <span style={{ fontSize: 12, color: "#34d399", fontWeight: 600 }}>LIVE</span>
           </div>
+          {!USE_MOCK_DATA && lastUpdated && (
+            <div style={{ fontSize: 11, color: "#64748b" }}>
+              Updated {timeAgo(lastUpdated)}
+            </div>
+          )}
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 18, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", color: "#f1f5f9", fontVariantNumeric: "tabular-nums" }}>
               {currentTime.toLocaleTimeString("en-GB")}
@@ -966,14 +1433,21 @@ export default function CrociPortal() {
 
       <div style={{ padding: "24px clamp(16px, 3vw, 32px)", maxWidth: 1440, margin: "0 auto" }}>
 
+        {/* ── Error Banner ───────────────────────────────── */}
+        {!USE_MOCK_DATA && sheetsError && (
+          <div style={{
+            padding: "12px 20px", marginBottom: 20,
+            background: "#1a0a0a", border: "1px solid #ef4444", borderRadius: 10,
+          }}>
+            <span style={{ color: "#ef4444", fontSize: 13 }}>
+              Data error: {sheetsError}. {data ? "Showing cached data." : "Retrying..."}
+            </span>
+          </div>
+        )}
+
         {/* ── KPI Strip ────────────────────────────────── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 28 }}>
-          {[
-            { label: "Live Events", value: liveCount, color: "#34d399", icon: "📡" },
-            { label: "Sales Today", value: totalSalesToday.toLocaleString(), color: "#60a5fa", icon: "🛒" },
-            { label: "Revenue Today", value: `£${(totalRevToday).toLocaleString()}`, color: "#f59e0b", icon: "💰" },
-            { label: "Active Countries", value: COUNTRIES.length, color: "#a78bfa", icon: "🌍" },
-          ].map((kpi, i) => (
+          {kpis.map((kpi, i) => (
             <Card key={i} accentColor={kpi.color} style={{ animation: `fadeUp 0.5s ease ${i * 0.1}s both` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
@@ -993,20 +1467,53 @@ export default function CrociPortal() {
         <Card style={{ marginBottom: 28, boxShadow: "0 0 30px rgba(52, 211, 153, 0.03)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34d399", animation: "pulse 1.5s infinite" }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#34d399", textTransform: "uppercase", letterSpacing: 1 }}>Live Sales Feed</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#34d399", textTransform: "uppercase", letterSpacing: 1 }}>
+              {USE_MOCK_DATA ? "Live Sales Feed" : "Recent Sales Entries"}
+            </span>
           </div>
-          <LiveSaleTicker sales={liveSales} />
-          {liveSales.length === 0 && <p style={{ color: "#475569", fontSize: 13, margin: 0 }}>Waiting for incoming sales...</p>}
+          <LiveSaleTicker sales={displaySales} isLive={!USE_MOCK_DATA} />
+          {displaySales.length === 0 && <p style={{ color: "#475569", fontSize: 13, margin: 0 }}>Waiting for incoming sales...</p>}
         </Card>
 
         {/* ══════════════════════════════════════════════════
-            SECTION 1: THIS WEEK'S EVENTS BY COUNTRY
+            SECTION 1: THIS WEEK'S EVENTS
         ══════════════════════════════════════════════════ */}
         <Card style={{ marginBottom: 28, animation: "scaleIn 0.4s ease" }}>
-          <SectionHeader icon="📅" subtitle="All live and scheduled events with real-time sales data">This Week's Events</SectionHeader>
-          <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-            {COUNTRIES.map(c => <CountryTab key={c} country={c} active={activeCountry === c} onClick={() => setActiveCountry(c)} />)}
-          </div>
+          <SectionHeader icon="📅" subtitle="All live and scheduled events with real-time sales data">
+            {USE_MOCK_DATA ? "This Week's Events" : `Events \u2014 ${selectedWeek || "This Week"}`}
+          </SectionHeader>
+
+          {/* Week Picker (live mode only) */}
+          {!USE_MOCK_DATA && availableWeeks && availableWeeks.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <label style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Week:</label>
+              <select
+                value={selectedWeek || ""}
+                onChange={(e) => setSelectedWeek(e.target.value)}
+                style={{
+                  padding: "6px 12px", borderRadius: 8,
+                  background: "#0a0f1a", border: "1px solid #1e293b",
+                  color: "#e2e8f0", fontSize: 13,
+                  fontFamily: "'DM Sans', sans-serif",
+                  cursor: "pointer", outline: "none",
+                }}
+              >
+                {availableWeeks.map(wk => (
+                  <option key={wk} value={wk}>
+                    {wk}{wk === currentWeek ? " (Current)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Country Tabs (mock mode only) */}
+          {USE_MOCK_DATA && (
+            <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+              {ACTIVE_COUNTRIES.map(c => <CountryTab key={c} country={c} active={activeCountry === c} onClick={() => setActiveCountry(c)} />)}
+            </div>
+          )}
+
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 4px" }}>
               <thead>
@@ -1017,187 +1524,303 @@ export default function CrociPortal() {
                 </tr>
               </thead>
               <tbody>
-                {thisWeekEvents[activeCountry]?.map((event, i) => (
-                  <tr key={event.id} style={{
-                    animation: `fadeUp 0.3s ease ${i * 0.05}s both`,
-                    transition: "background 0.2s ease",
-                    cursor: "default",
-                  }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = "#0d1117"}
-                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-                  >
-                    <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{event.name}</td>
-                    <td style={{ padding: "12px 14px", fontSize: 12, color: "#94a3b8" }}>{event.venue}</td>
-                    <td style={{ padding: "12px 14px", fontSize: 12, color: "#94a3b8" }}>{event.date}</td>
-                    {WEATHER_ENABLED && (
-                      <td style={{ padding: "12px 14px" }}>
-                        <WeatherCell venue={event.venue} weatherData={weatherData} loading={weatherLoading} />
+                {USE_MOCK_DATA ? (
+                  thisWeekEvents[activeCountry]?.map((event, i) => (
+                    <tr key={event.id} style={{ animation: `fadeUp 0.3s ease ${i * 0.05}s both`, transition: "background 0.2s ease", cursor: "default" }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#0d1117"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    >
+                      <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{event.name}</td>
+                      <td style={{ padding: "12px 14px", fontSize: 12, color: "#94a3b8" }}>{event.venue}</td>
+                      <td style={{ padding: "12px 14px", fontSize: 12, color: "#94a3b8" }}>{event.date}</td>
+                      {WEATHER_ENABLED && (
+                        <td style={{ padding: "12px 14px" }}>
+                          <WeatherCell venue={event.venue} weatherData={weatherData} loading={weatherLoading} />
+                        </td>
+                      )}
+                      <td style={{ padding: "12px 14px" }}><StatusBadge status={event.status} /></td>
+                      <td style={{ padding: "12px 14px", fontSize: 14, fontWeight: 700, color: "#60a5fa", fontVariantNumeric: "tabular-nums" }}>{event.ticketsSold}</td>
+                      <td style={{ padding: "12px 14px", fontSize: 14, fontWeight: 700, color: "#34d399", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{event.revenue.toLocaleString()}</td>
+                      <td style={{ padding: "12px 14px", minWidth: 120 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <ProgressBar value={event.ticketsSold} max={event.target} />
+                          <span style={{ fontSize: 10, color: "#64748b", whiteSpace: "nowrap" }}>{event.target > 0 ? Math.round((event.ticketsSold / event.target) * 100) : 0}%</span>
+                        </div>
                       </td>
-                    )}
-                    <td style={{ padding: "12px 14px" }}><StatusBadge status={event.status} /></td>
-                    <td style={{ padding: "12px 14px", fontSize: 14, fontWeight: 700, color: "#60a5fa", fontVariantNumeric: "tabular-nums" }}>{event.ticketsSold}</td>
-                    <td style={{ padding: "12px 14px", fontSize: 14, fontWeight: 700, color: "#34d399", fontVariantNumeric: "tabular-nums" }}>£{event.revenue.toLocaleString()}</td>
-                    <td style={{ padding: "12px 14px", minWidth: 120 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <ProgressBar value={event.ticketsSold} max={event.target} />
-                        <span style={{ fontSize: 10, color: "#64748b", whiteSpace: "nowrap" }}>{Math.round((event.ticketsSold / event.target) * 100)}%</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                    </tr>
+                  ))
+                ) : (
+                  (thisWeekEvents["United States"] || []).map((event, i) => (
+                    <tr key={event.id} style={{ animation: `fadeUp 0.3s ease ${i * 0.05}s both`, transition: "background 0.2s ease", cursor: "default" }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#0d1117"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    >
+                      <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{event.name}</td>
+                      <td style={{ padding: "12px 14px", fontSize: 12, color: "#94a3b8" }}>{event.location || event.venue}</td>
+                      <td style={{ padding: "12px 14px", fontSize: 12, color: "#94a3b8" }}>{event.state}</td>
+                      <td style={{ padding: "12px 14px", fontSize: 12, color: "#94a3b8", whiteSpace: "nowrap" }}>{event.date}</td>
+                      <td style={{ padding: "12px 14px" }}><StatusBadge status={event.status} /></td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#60a5fa", fontVariantNumeric: "tabular-nums" }}>{event.ticketsSold}</span>
+                          <span style={{ color: "#475569", fontSize: 12 }}>/ {event.target || "?"}</span>
+                          <ProgressBar value={event.ticketsSold} max={event.target || 1} color={event.target > 0 && event.ticketsSold >= event.target ? "#34d399" : "#60a5fa"} />
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: event.uniqueAgents >= event.expectedStaff && event.expectedStaff > 0 ? "#34d399" : "#f59e0b" }}>
+                          {event.staffFraction}
+                        </span>
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        {event.cpa !== null
+                          ? <span style={{ fontSize: 13, fontWeight: 700, color: event.cpa <= 80 ? "#34d399" : event.cpa <= 150 ? "#f59e0b" : "#ef4444", fontVariantNumeric: "tabular-nums" }}>${event.cpa.toFixed(2)}</span>
+                          : <span style={{ color: "#475569", fontSize: 12 }}>--</span>}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
+            {!USE_MOCK_DATA && (thisWeekEvents["United States"] || []).length === 0 && (
+              <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 20 }}>No events found for {selectedWeek}</p>
+            )}
           </div>
         </Card>
 
         {/* ══════════════════════════════════════════════════
-            SECTION 2: TOP 3 SALESPERSONS PER CAMPAIGN — TODAY
+            SECTION 2: LEADERBOARD — TODAY
         ══════════════════════════════════════════════════ */}
         <Card style={{ marginBottom: 28, animation: "scaleIn 0.4s ease 0.1s both" }}>
-          <SectionHeader icon="🏆" subtitle="Top performers by campaign — updated in real-time">Today's Leaderboard</SectionHeader>
-          {COUNTRIES.map(country => (
-            <div key={country} style={{ marginBottom: 24 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 600, color: "#94a3b8", margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}>
-                <span>{FLAGS[country]}</span> {country}
-              </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
-                {dailySales[country]?.map(camp => (
-                  <div key={camp.campaign} style={{ background: "#0a0f1a", border: "1px solid #1e293b", borderRadius: 10, padding: 14, transition: "border-color 0.2s ease" }}>
-                    <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{camp.campaign}</p>
-                    {camp.top3.map(person => (
-                      <div key={person.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #111827" }}>
-                        <RankBadge rank={person.rank} />
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{person.name}</p>
-                          <p style={{ fontSize: 10, color: "#64748b", margin: 0 }}>{person.sales} sales · {person.conversionRate}% conv.</p>
+          <SectionHeader icon="🏆" subtitle={USE_MOCK_DATA ? "Top performers by campaign \u2014 updated in real-time" : "Top performers by event \u2014 based on live sales entries"}>Today's Leaderboard</SectionHeader>
+          {USE_MOCK_DATA ? (
+            ACTIVE_COUNTRIES.map(country => (
+              <div key={country} style={{ marginBottom: 24 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: "#94a3b8", margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>{FLAGS[country]}</span> {country}
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
+                  {dailySales[country]?.map(camp => (
+                    <div key={camp.campaign} style={{ background: "#0a0f1a", border: "1px solid #1e293b", borderRadius: 10, padding: 14 }}>
+                      <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{camp.campaign}</p>
+                      {camp.top3.map(person => (
+                        <div key={person.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #111827" }}>
+                          <RankBadge rank={person.rank} />
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{person.name}</p>
+                            <p style={{ fontSize: 10, color: "#64748b", margin: 0 }}>{person.sales} sales · {person.conversionRate}% conv.</p>
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "#34d399", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{person.revenue.toLocaleString()}</span>
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "#34d399", fontVariantNumeric: "tabular-nums" }}>£{person.revenue.toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                ))}
+                      ))}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </Card>
-
-        {/* ══════════════════════════════════════════════════
-            SECTION 3: TOP 3 SALESPERSONS PER CAMPAIGN — THIS WEEK
-        ══════════════════════════════════════════════════ */}
-        <Card style={{ marginBottom: 28, animation: "scaleIn 0.4s ease 0.15s both" }}>
-          <SectionHeader icon="📊" subtitle="Cumulative weekly performance across all active campaigns">This Week's Leaderboard</SectionHeader>
-          {COUNTRIES.map(country => (
-            <div key={country} style={{ marginBottom: 24 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 600, color: "#94a3b8", margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}>
-                <span>{FLAGS[country]}</span> {country}
-              </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
-                {weeklySales[country]?.map(camp => (
-                  <div key={camp.campaign} style={{ background: "#0a0f1a", border: "1px solid #1e293b", borderRadius: 10, padding: 14, transition: "border-color 0.2s ease" }}>
-                    <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{camp.campaign}</p>
-                    {camp.top3.map(person => (
-                      <div key={person.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #111827" }}>
-                        <RankBadge rank={person.rank} />
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{person.name}</p>
-                          <p style={{ fontSize: 10, color: "#64748b", margin: 0 }}>{person.sales} sales · {person.conversionRate}% conv.</p>
+            ))
+          ) : (
+            <div>
+              {(dailySales["United States"] || []).length === 0 ? (
+                <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 20 }}>No sales recorded for today yet</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
+                  {(dailySales["United States"] || []).map(camp => (
+                    <div key={camp.campaign} style={{ background: "#0a0f1a", border: "1px solid #1e293b", borderRadius: 10, padding: 14 }}>
+                      <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{camp.campaign}</p>
+                      {camp.top3.map(person => (
+                        <div key={person.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #111827" }}>
+                          <RankBadge rank={person.rank} />
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{person.name}</p>
+                            <p style={{ fontSize: 10, color: "#64748b", margin: 0 }}>{person.sales} sales</p>
+                          </div>
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "#34d399", fontVariantNumeric: "tabular-nums" }}>£{person.revenue.toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </Card>
-
-        {/* ══════════════════════════════════════════════════
-            SECTION 4: CAMPAIGN BREAKDOWN — PRODUCT STATS
-        ══════════════════════════════════════════════════ */}
-        <Card style={{ marginBottom: 28, animation: "scaleIn 0.4s ease 0.2s both" }}>
-          <SectionHeader icon="📦" subtitle="Detailed breakdown by feeding plan and box type for each campaign">Campaign Product Breakdown</SectionHeader>
-          {campaignBreakdown.map((camp, ci) => (
-            <div key={camp.campaign} style={{ marginBottom: 16 }}>
-              <button
-                onClick={() => setExpandedCampaign(expandedCampaign === ci ? null : ci)}
-                style={{
-                  width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
-                  padding: "14px 18px", background: "#0a0f1a", border: "1px solid #1e293b", borderRadius: 10,
-                  cursor: "pointer", color: "#e2e8f0", fontFamily: "'DM Sans', sans-serif",
-                  transition: "background 0.2s ease, border-color 0.2s ease",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#0d1117"; e.currentTarget.style.borderColor = "#2d3748"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "#0a0f1a"; e.currentTarget.style.borderColor = "#1e293b"; }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 16, fontWeight: 700 }}>{camp.campaign}</span>
-                  <span style={{ fontSize: 12, color: "#64748b", background: "#111827", padding: "2px 10px", borderRadius: 12 }}>
-                    {camp.products.length} products
-                  </span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                  <span style={{ fontSize: 13, color: "#34d399", fontWeight: 600 }}>£{camp.totalRevenue.toLocaleString()}</span>
-                  <span style={{ fontSize: 13, color: "#60a5fa" }}>{camp.totalUnits.toLocaleString()} units</span>
-                  <span style={{ fontSize: 18, color: "#64748b", transition: "transform 0.2s", transform: expandedCampaign === ci ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
-                </div>
-              </button>
-              {expandedCampaign === ci && (
-                <div style={{ animation: "fadeUp 0.3s ease", marginTop: 4 }}>
-                  {["Feeding Plan", "Box Type"].map(type => (
-                    <div key={type} style={{ marginTop: 8 }}>
-                      <p style={{ fontSize: 11, color: "#64748b", padding: "8px 18px", margin: 0, textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>{type}s</p>
-                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                        <thead>
-                          <tr>
-                            {["Product", "Units Sold", "Revenue", "Avg Order Value", "Return Rate"].map(h => (
-                              <th key={h} style={{ padding: "6px 18px", textAlign: "left", fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {camp.products.filter(p => p.type === type).map((product, pi) => (
-                            <tr key={product.name} style={{
-                              borderBottom: "1px solid #111827",
-                              background: pi % 2 === 0 ? "transparent" : "#0a0f1a08",
-                              transition: "background 0.2s ease",
-                            }}
-                              onMouseEnter={(e) => e.currentTarget.style.background = "#0d1117"}
-                              onMouseLeave={(e) => e.currentTarget.style.background = pi % 2 === 0 ? "transparent" : "#0a0f1a08"}
-                            >
-                              <td style={{ padding: "10px 18px", fontSize: 13, fontWeight: 500, color: "#e2e8f0" }}>{product.name}</td>
-                              <td style={{ padding: "10px 18px", fontSize: 13, fontWeight: 600, color: "#60a5fa", fontVariantNumeric: "tabular-nums" }}>{product.unitsSold}</td>
-                              <td style={{ padding: "10px 18px", fontSize: 13, fontWeight: 600, color: "#34d399", fontVariantNumeric: "tabular-nums" }}>£{product.revenue.toLocaleString()}</td>
-                              <td style={{ padding: "10px 18px", fontSize: 13, color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>£{product.avgOrderValue}</td>
-                              <td style={{ padding: "10px 18px" }}>
-                                <span style={{ fontSize: 12, fontWeight: 600, color: product.returnRate > 4 ? "#ef4444" : product.returnRate > 2 ? "#f59e0b" : "#34d399" }}>
-                                  {product.returnRate}%
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      ))}
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          ))}
+          )}
         </Card>
+
+        {/* ══════════════════════════════════════════════════
+            SECTION 3: LEADERBOARD — THIS WEEK
+        ══════════════════════════════════════════════════ */}
+        <Card style={{ marginBottom: 28, animation: "scaleIn 0.4s ease 0.15s both" }}>
+          <SectionHeader icon="📊" subtitle={USE_MOCK_DATA ? "Cumulative weekly performance across all active campaigns" : `Cumulative performance for ${selectedWeek || "this week"}`}>
+            {USE_MOCK_DATA ? "This Week's Leaderboard" : `${selectedWeek || "Week"} Leaderboard`}
+          </SectionHeader>
+          {USE_MOCK_DATA ? (
+            ACTIVE_COUNTRIES.map(country => (
+              <div key={country} style={{ marginBottom: 24 }}>
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: "#94a3b8", margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>{FLAGS[country]}</span> {country}
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
+                  {weeklySales[country]?.map(camp => (
+                    <div key={camp.campaign} style={{ background: "#0a0f1a", border: "1px solid #1e293b", borderRadius: 10, padding: 14 }}>
+                      <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{camp.campaign}</p>
+                      {camp.top3.map(person => (
+                        <div key={person.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #111827" }}>
+                          <RankBadge rank={person.rank} />
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{person.name}</p>
+                            <p style={{ fontSize: 10, color: "#64748b", margin: 0 }}>{person.sales} sales · {person.conversionRate}% conv.</p>
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "#34d399", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{person.revenue.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div>
+              {(weeklySales["United States"] || []).length === 0 ? (
+                <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 20 }}>No sales data for {selectedWeek} events yet</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
+                  {(weeklySales["United States"] || []).map(camp => (
+                    <div key={camp.campaign} style={{ background: "#0a0f1a", border: "1px solid #1e293b", borderRadius: 10, padding: 14 }}>
+                      <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{camp.campaign}</p>
+                      {camp.top3.map(person => (
+                        <div key={person.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #111827" }}>
+                          <RankBadge rank={person.rank} />
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{person.name}</p>
+                            <p style={{ fontSize: 10, color: "#64748b", margin: 0 }}>{person.sales} sales</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+
+        {/* ══════════════════════════════════════════════════
+            SECTION 4: CAMPAIGN BREAKDOWN (mock mode only)
+        ══════════════════════════════════════════════════ */}
+        {USE_MOCK_DATA && (
+          <Card style={{ marginBottom: 28, animation: "scaleIn 0.4s ease 0.2s both" }}>
+            <SectionHeader icon="📦" subtitle="Detailed breakdown by feeding plan and box type for each campaign">Campaign Product Breakdown</SectionHeader>
+            {campaignBreakdown.map((camp, ci) => (
+              <div key={camp.campaign} style={{ marginBottom: 16 }}>
+                <button
+                  onClick={() => setExpandedCampaign(expandedCampaign === ci ? null : ci)}
+                  style={{
+                    width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "14px 18px", background: "#0a0f1a", border: "1px solid #1e293b", borderRadius: 10,
+                    cursor: "pointer", color: "#e2e8f0", fontFamily: "'DM Sans', sans-serif",
+                    transition: "background 0.2s ease, border-color 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#0d1117"; e.currentTarget.style.borderColor = "#2d3748"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "#0a0f1a"; e.currentTarget.style.borderColor = "#1e293b"; }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 16, fontWeight: 700 }}>{camp.campaign}</span>
+                    <span style={{ fontSize: 12, color: "#64748b", background: "#111827", padding: "2px 10px", borderRadius: 12 }}>
+                      {camp.products.length} products
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                    <span style={{ fontSize: 13, color: "#34d399", fontWeight: 600 }}>{currencySymbol}{camp.totalRevenue.toLocaleString()}</span>
+                    <span style={{ fontSize: 13, color: "#60a5fa" }}>{camp.totalUnits.toLocaleString()} units</span>
+                    <span style={{ fontSize: 18, color: "#64748b", transition: "transform 0.2s", transform: expandedCampaign === ci ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
+                  </div>
+                </button>
+                {expandedCampaign === ci && (
+                  <div style={{ animation: "fadeUp 0.3s ease", marginTop: 4 }}>
+                    {["Feeding Plan", "Box Type"].map(type => (
+                      <div key={type} style={{ marginTop: 8 }}>
+                        <p style={{ fontSize: 11, color: "#64748b", padding: "8px 18px", margin: 0, textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>{type}s</p>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr>
+                              {["Product", "Units Sold", "Revenue", "Avg Order Value", "Return Rate"].map(h => (
+                                <th key={h} style={{ padding: "6px 18px", textAlign: "left", fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {camp.products.filter(p => p.type === type).map((product, pi) => (
+                              <tr key={product.name} style={{
+                                borderBottom: "1px solid #111827",
+                                background: pi % 2 === 0 ? "transparent" : "#0a0f1a08",
+                                transition: "background 0.2s ease",
+                              }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = "#0d1117"}
+                                onMouseLeave={(e) => e.currentTarget.style.background = pi % 2 === 0 ? "transparent" : "#0a0f1a08"}
+                              >
+                                <td style={{ padding: "10px 18px", fontSize: 13, fontWeight: 500, color: "#e2e8f0" }}>{product.name}</td>
+                                <td style={{ padding: "10px 18px", fontSize: 13, fontWeight: 600, color: "#60a5fa", fontVariantNumeric: "tabular-nums" }}>{product.unitsSold}</td>
+                                <td style={{ padding: "10px 18px", fontSize: 13, fontWeight: 600, color: "#34d399", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{product.revenue.toLocaleString()}</td>
+                                <td style={{ padding: "10px 18px", fontSize: 13, color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{product.avgOrderValue}</td>
+                                <td style={{ padding: "10px 18px" }}>
+                                  <span style={{ fontSize: 12, fontWeight: 600, color: product.returnRate > 4 ? "#ef4444" : product.returnRate > 2 ? "#f59e0b" : "#34d399" }}>
+                                    {product.returnRate}%
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </Card>
+        )}
 
         {/* ══════════════════════════════════════════════════
             SECTION 5: NEXT WEEK'S EVENTS
         ══════════════════════════════════════════════════ */}
         <Card style={{ marginBottom: 40, animation: "scaleIn 0.4s ease 0.25s both" }}>
-          <SectionHeader icon="🔮" subtitle="Upcoming events scheduled for next week across all territories">Next Week's Events</SectionHeader>
-          {COUNTRIES.map(country => (
-            <div key={country} style={{ marginBottom: 20 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 600, color: "#94a3b8", margin: "0 0 10px", display: "flex", alignItems: "center", gap: 8 }}>
-                <span>{FLAGS[country]}</span> {country}
-              </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 10 }}>
-                {nextWeekEvents[country]?.map(event => (
+          <SectionHeader icon="🔮" subtitle={USE_MOCK_DATA ? "Upcoming events scheduled for next week across all territories" : `Events scheduled for next week`}>
+            {USE_MOCK_DATA ? "Next Week's Events" : `Next Week (WK${(parseInt((selectedWeek || "WK0").replace(/\D/g, ""), 10) || 0) + 1})`}
+          </SectionHeader>
+          {USE_MOCK_DATA ? (
+            ACTIVE_COUNTRIES.map(country => (
+              <div key={country} style={{ marginBottom: 20 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 600, color: "#94a3b8", margin: "0 0 10px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span>{FLAGS[country]}</span> {country}
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 10 }}>
+                  {nextWeekEvents[country]?.map(event => (
+                    <div key={event.id} style={{
+                      background: "#0a0f1a", border: "1px solid #1e293b", borderRadius: 10, padding: 14,
+                      display: "flex", flexDirection: "column", gap: 6,
+                      transition: "border-color 0.2s ease, transform 0.2s ease",
+                    }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#2d3748"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#1e293b"; e.currentTarget.style.transform = "translateY(0)"; }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{event.name}</p>
+                        <StatusBadge status="upcoming" />
+                      </div>
+                      <p style={{ fontSize: 11, color: "#64748b", margin: 0 }}>📍 {event.venue}</p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 12, color: "#94a3b8" }}>📆 {event.date}</span>
+                        <span style={{ fontSize: 11, color: "#475569" }}>Target: {event.target} sales</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 10 }}>
+              {(nextWeekEvents["United States"] || []).length === 0 ? (
+                <p style={{ color: "#475569", fontSize: 13, padding: 10 }}>No events scheduled for next week yet</p>
+              ) : (
+                (nextWeekEvents["United States"] || []).map(event => (
                   <div key={event.id} style={{
                     background: "#0a0f1a", border: "1px solid #1e293b", borderRadius: 10, padding: 14,
                     display: "flex", flexDirection: "column", gap: 6,
@@ -1210,27 +1833,25 @@ export default function CrociPortal() {
                       <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{event.name}</p>
                       <StatusBadge status="upcoming" />
                     </div>
-                    <p style={{ fontSize: 11, color: "#64748b", margin: 0 }}>📍 {event.venue}</p>
+                    <p style={{ fontSize: 11, color: "#64748b", margin: 0 }}>📍 {event.location || event.venue}{event.state ? `, ${event.state}` : ""}</p>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ fontSize: 12, color: "#94a3b8" }}>📆 {event.date}</span>
-                      <span style={{ fontSize: 11, color: "#475569" }}>Target: {event.target} sales</span>
+                      <span style={{ fontSize: 11, color: "#475569" }}>Target: {event.target || "?"} sales</span>
                     </div>
-                    {WEATHER_ENABLED && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, borderTop: "1px solid #111827", paddingTop: 6, marginTop: 2 }}>
-                        <span style={{ fontSize: 11, color: "#475569" }}>☀️</span>
-                        <WeatherCell venue={event.venue} weatherData={weatherData} loading={weatherLoading} />
-                      </div>
-                    )}
                   </div>
-                ))}
-              </div>
+                ))
+              )}
             </div>
-          ))}
+          )}
         </Card>
 
         {/* ── Footer ───────────────────────────────────── */}
         <div style={{ textAlign: "center", padding: "20px 0 40px", borderTop: "1px solid #111827" }}>
-          <p style={{ fontSize: 11, color: "#334155", margin: 0 }}>Croci Collective Operations Portal · Prototype Dashboard · Data is simulated for demonstration</p>
+          <p style={{ fontSize: 11, color: "#334155", margin: 0 }}>
+            Croci Collective Operations Portal {USE_MOCK_DATA
+              ? "\u00b7 Prototype Dashboard \u00b7 Data is simulated for demonstration"
+              : `\u00b7 Live data from Google Sheets${lastUpdated ? ` \u00b7 Last refreshed ${timeAgo(lastUpdated)}` : ""}`}
+          </p>
         </div>
       </div>
     </div>
