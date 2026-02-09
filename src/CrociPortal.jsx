@@ -8,8 +8,17 @@ const USE_MOCK_DATA = false; // Set to true to use generated demo data
 
 // ── Google Sheets Configuration ──────────────────────────────────────
 const MASTER_TRACKER_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSfQ_GG1qM6ZsP2No7yQKRVmtb6UjccbcXp--jOIHEUC0bYUaN4opouQBixctbC6G-XVGZfGA28yIZ1/pub?gid=1256054786&single=true&output=csv";
-const SALES_ENTRIES_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTd-lneum3ekG7RcjlQX9tzk2SfYlCzXz0rDbZvYNm9uI_gRmbMXAeAd3TefiabeRl5TaeqWg6VHRs5/pub?gid=250023368&single=true&output=csv";
+const SALES_SPREADSHEET_ID = "1pKRWsY_BZpR52k7DZWsc0WfKW1f9LVmM_USQaK6jOQg";
+const SALES_PUBHTML_URL = `https://docs.google.com/spreadsheets/d/${SALES_SPREADSHEET_ID}/pubhtml`;
+const SALES_CSV_BASE_URL = `https://docs.google.com/spreadsheets/d/${SALES_SPREADSHEET_ID}/pub`;
 const REFRESH_INTERVAL = 2.5 * 60 * 1000; // 2.5 minutes
+
+// ── Map Region Configuration ─────────────────────────────────────────
+const MAP_REGIONS = {
+  US: { center: [39.8, -98.5], zoom: 4, label: "North America" },
+  UK: { center: [54.0, -4.0], zoom: 5, label: "UK & Ireland" },
+};
+const MAP_ROTATION_INTERVAL = 20000; // 20 seconds
 
 // ── Password Protection ─────────────────────────────────────────────
 const PASSWORD_PROTECTED = true;
@@ -214,8 +223,63 @@ function formatDateForSales(date) {
   return `${mm}-${dd}-${date.getFullYear()}`;
 }
 
+// ── Sales Tab Discovery ──────────────────────────────────────────────
+async function discoverSalesTabGids() {
+  try {
+    const response = await fetch(SALES_PUBHTML_URL);
+    if (!response.ok) throw new Error(`pubhtml HTTP ${response.status}`);
+    const html = await response.text();
+
+    // Parse sheet-button elements: <li id="sheet-button-1246014827">...<a>WK3</a>...</li>
+    const tabPattern = /id="sheet-button-(\d+)"[\s\S]*?<a[^>]*>([^<]+)<\/a>/gi;
+    const tabs = [];
+    let match;
+    while ((match = tabPattern.exec(html)) !== null) {
+      const gid = match[1];
+      const name = match[2].trim();
+      if (/^WK\d+$/i.test(name)) {
+        tabs.push({ gid, name });
+      }
+    }
+
+    if (tabs.length > 0) return tabs;
+
+    // Fallback regex for alternative HTML structures
+    const altPattern = /gid=(\d+)[^"]*"[^>]*>([^<]*WK\d+[^<]*)</gi;
+    while ((match = altPattern.exec(html)) !== null) {
+      tabs.push({ gid: match[1], name: match[2].trim() });
+    }
+    if (tabs.length > 0) return tabs;
+  } catch (err) {
+    console.warn("Sales tab discovery failed, using fallback:", err);
+  }
+  // Fallback: return the known WK6 tab
+  return [{ gid: "250023368", name: "WK6" }];
+}
+
+async function fetchAllSalesTabs(tabs) {
+  const csvPromises = tabs.map(async (tab) => {
+    const url = `${SALES_CSV_BASE_URL}?gid=${tab.gid}&single=true&output=csv`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.warn(`Failed to fetch sales tab ${tab.name}: HTTP ${res.status}`);
+        return [];
+      }
+      const text = await res.text();
+      const rows = parseCSV(text);
+      return rows.slice(2); // Skip 2 header rows per tab
+    } catch (err) {
+      console.warn(`Error fetching sales tab ${tab.name}:`, err);
+      return [];
+    }
+  });
+  const allTabRows = await Promise.all(csvPromises);
+  return allTabRows.flat();
+}
+
 // ── Process Google Sheets Data ───────────────────────────────────────
-function processData(masterRows, salesRows, selectedWeek) {
+function processData(masterRows, salesRows, selectedWeek, salesPreStripped = false) {
   // Parse Master Tracker — skip first 3 blank/header rows, row 3 is the real header
   const masterData = masterRows.slice(4);
 
@@ -249,8 +313,9 @@ function processData(masterRows, salesRows, selectedWeek) {
       country: "United States",
     }));
 
-  // Parse Sales Entries — skip 2 header rows
-  const salesData = salesRows.slice(2)
+  // Parse Sales Entries — skip headers if not pre-stripped
+  const rawSalesRows = salesPreStripped ? salesRows : salesRows.slice(2);
+  const salesData = rawSalesRows
     .filter(row => row && row.length >= 7)
     .map(row => {
       const agentField = (row[1] || "").trim();
@@ -274,15 +339,32 @@ function processData(masterRows, salesRows, selectedWeek) {
     salesByEvent[key].push(sale);
   });
 
-  // Join: compute live stats for each event
+  // Join: compute live stats for each event (DATE-FILTERED)
   events.forEach(event => {
     const key = event.eventName.toLowerCase();
-    const eventSales = salesByEvent[key] || [];
+    const allEventSales = salesByEvent[key] || [];
+
+    // Filter sales to only those within this event's date range
+    let eventSales;
+    if (event.startDate && event.endDate) {
+      const rangeStart = new Date(event.startDate);
+      rangeStart.setHours(0, 0, 0, 0);
+      const rangeEnd = new Date(event.endDate);
+      rangeEnd.setHours(23, 59, 59, 999);
+      eventSales = allEventSales.filter(sale => {
+        if (!sale.date) return false;
+        return sale.date >= rangeStart && sale.date <= rangeEnd;
+      });
+    } else {
+      eventSales = allEventSales; // fallback if no dates
+    }
+
     event.liveSalesCount = eventSales.length;
     event.uniqueAgentCodes = new Set(eventSales.map(s => s.agentCode));
     event.uniqueAgents = event.uniqueAgentCodes.size;
     event.staffFraction = `${event.uniqueAgents} / ${event.expectedStaff || "?"}`;
     event.cpa = event.liveSalesCount > 0 ? (event.totalUpfronts / event.liveSalesCount) : null;
+    event._filteredSales = eventSales; // store for leaderboard reuse
   });
 
   // Merge duplicate events within the same week (e.g. two booths at same show)
@@ -352,11 +434,8 @@ function processData(masterRows, salesRows, selectedWeek) {
   const thisWeekEvts = mergedEvents.filter(e => e.weekNum === activeWeek);
   const nextWeekEvts = mergedEvents.filter(e => e.weekNum === nextWeekLabel);
 
-  // Build leaderboard from sales data
-  const thisWeekEventNames = new Set(thisWeekEvts.map(e => e.eventName.toLowerCase()));
-  const weekSalesForLeaderboard = salesData.filter(s =>
-    thisWeekEventNames.has(s.eventName.toLowerCase())
-  );
+  // Build leaderboard from date-filtered sales
+  const weekSalesForLeaderboard = thisWeekEvts.flatMap(e => e._filteredSales || []);
 
   const todayStr = formatDateForSales(today);
   const todaySalesForLeaderboard = weekSalesForLeaderboard.filter(s => s.dateRaw === todayStr);
@@ -418,8 +497,8 @@ function processData(masterRows, salesRows, selectedWeek) {
     };
   }
 
-  // Build recent sales for live ticker
-  const recentSales = salesData
+  // Build recent sales for live ticker (from current week's date-filtered sales)
+  const recentSales = weekSalesForLeaderboard
     .sort((a, b) => (b.date || 0) - (a.date || 0))
     .slice(0, 20)
     .map((sale, i) => ({
@@ -601,21 +680,23 @@ function useGoogleSheetsData() {
     try {
       if (isFirstFetch.current) setLoading(true);
 
-      const [masterRes, salesRes] = await Promise.all([
+      // Fetch master tracker and discover sales tabs in parallel
+      const [masterRes, salesTabs] = await Promise.all([
         fetch(MASTER_TRACKER_URL),
-        fetch(SALES_ENTRIES_URL),
+        discoverSalesTabGids(),
       ]);
 
       if (!masterRes.ok) throw new Error(`Master tracker: HTTP ${masterRes.status}`);
-      if (!salesRes.ok) throw new Error(`Sales entries: HTTP ${salesRes.status}`);
 
-      const masterText = await masterRes.text();
-      const salesText = await salesRes.text();
+      // Fetch all sales tab CSVs in parallel
+      const [masterText, salesDataRows] = await Promise.all([
+        masterRes.text(),
+        fetchAllSalesTabs(salesTabs),
+      ]);
 
       const masterRows = parseCSV(masterText);
-      const salesRows = parseCSV(salesText);
 
-      const processed = processData(masterRows, salesRows, selectedWeek);
+      const processed = processData(masterRows, salesDataRows, selectedWeek, true);
 
       setData(processed.data);
       setAvailableWeeks(processed.availableWeeks);
@@ -1028,28 +1109,34 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
+  const rotationRef = useRef(null);
+  const activeRegionsRef = useRef([]);
+  const [currentRegionIndex, setCurrentRegionIndex] = useState(0);
 
   useEffect(() => {
     if (!leafletLoaded || !mapRef.current || mapInstanceRef.current) return;
     const L = window.L;
 
-    const defaultCenter = USE_MOCK_DATA ? [48.0, -10.0] : [39.8, -98.5];
-    const defaultZoom = USE_MOCK_DATA ? 3 : 4;
-
     const map = L.map(mapRef.current, {
-      zoomControl: true,
-      scrollWheelZoom: true,
-      attributionControl: true,
-    }).setView(defaultCenter, defaultZoom);
+      zoomControl: false,
+      scrollWheelZoom: false,
+      dragging: false,
+      touchZoom: false,
+      doubleClickZoom: false,
+      boxZoom: false,
+      keyboard: false,
+      attributionControl: false,
+    }).setView(MAP_REGIONS.US.center, MAP_REGIONS.US.zoom);
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: "\u00a9 OSM \u00a9 CARTO",
+      attribution: "",
       maxZoom: 19,
     }).addTo(map);
 
     mapInstanceRef.current = map;
 
     return () => {
+      if (rotationRef.current) clearInterval(rotationRef.current);
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -1060,8 +1147,13 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
     const L = window.L;
     const map = mapInstanceRef.current;
 
+    // Clear old markers and rotation
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
+    if (rotationRef.current) {
+      clearInterval(rotationRef.current);
+      rotationRef.current = null;
+    }
 
     const countryColors = {
       "United Kingdom": "#3CB6BA",
@@ -1070,6 +1162,9 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
     };
 
     const currencySymbol = USE_MOCK_DATA ? "\u00a3" : "$";
+
+    // Track which regions have events
+    const regionHasEvents = { US: false, UK: false };
 
     events.forEach(event => {
       let coords = ALL_VENUE_COORDINATES[event.venue];
@@ -1082,6 +1177,16 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
 
       if (!coords) return;
 
+      // Determine region from country field or coordinates
+      const country = event.country || "United States";
+      if (country === "United Kingdom" || country === "Ireland") {
+        regionHasEvents.UK = true;
+      } else if (coords.lat > 49 && coords.lng > -11 && coords.lng < 2) {
+        regionHasEvents.UK = true;
+      } else {
+        regionHasEvents.US = true;
+      }
+
       const statusColor = {
         live: "#FF00B1",
         upcoming: "#BE6CFF",
@@ -1091,7 +1196,7 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
       const marker = L.circleMarker([coords.lat, coords.lng], {
         radius: event.status === "live" ? 10 : 7,
         fillColor: statusColor,
-        color: countryColors[event.country] || statusColor,
+        color: countryColors[country] || statusColor,
         weight: 2,
         opacity: 0.9,
         fillOpacity: 0.6,
@@ -1119,9 +1224,30 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
       markersRef.current.push(marker);
     });
 
-    if (markersRef.current.length > 0) {
-      const group = L.featureGroup(markersRef.current);
-      map.fitBounds(group.getBounds().pad(0.2));
+    // Build list of active regions (only those with events)
+    const regions = [];
+    if (regionHasEvents.US) regions.push(MAP_REGIONS.US);
+    if (regionHasEvents.UK) regions.push(MAP_REGIONS.UK);
+    activeRegionsRef.current = regions;
+    setCurrentRegionIndex(0);
+
+    // Set initial view to first active region
+    if (regions.length > 0) {
+      map.setView(regions[0].center, regions[0].zoom, { animate: false });
+    }
+
+    // Start auto-rotation if multiple regions have events
+    if (regions.length > 1) {
+      rotationRef.current = setInterval(() => {
+        setCurrentRegionIndex(prev => {
+          const next = (prev + 1) % activeRegionsRef.current.length;
+          const region = activeRegionsRef.current[next];
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.flyTo(region.center, region.zoom, { duration: 2.0 });
+          }
+          return next;
+        });
+      }, MAP_ROTATION_INTERVAL);
     }
   }, [events, leafletLoaded]);
 
@@ -1166,13 +1292,39 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
           </span>
         </div>
       </div>
-      <div ref={mapRef} style={{
-        width: "100%",
-        height: 400,
-        borderRadius: 10,
-        overflow: "hidden",
-        border: "1px solid #1e293b",
-      }} />
+      <div style={{ position: "relative" }}>
+        <div ref={mapRef} style={{
+          width: "100%",
+          height: 400,
+          borderRadius: 10,
+          overflow: "hidden",
+          border: "1px solid #1e293b",
+        }} />
+        {activeRegionsRef.current.length > 1 && (
+          <div style={{
+            position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)",
+            display: "flex", gap: 8, zIndex: 1000,
+          }}>
+            {activeRegionsRef.current.map((region, i) => (
+              <div key={region.label} style={{
+                width: 8, height: 8, borderRadius: "50%",
+                background: i === currentRegionIndex ? "#FF00B1" : "#475569",
+                transition: "background 0.3s ease",
+              }} />
+            ))}
+          </div>
+        )}
+        {activeRegionsRef.current.length > 1 && (
+          <div style={{
+            position: "absolute", top: 12, right: 12, zIndex: 1000,
+            background: "rgba(0,0,0,0.6)", borderRadius: 6, padding: "4px 10px",
+            fontSize: 11, color: "#94a3b8", fontFamily: "'Montserrat', sans-serif",
+            fontWeight: 600, letterSpacing: 0.5,
+          }}>
+            {activeRegionsRef.current[currentRegionIndex]?.label || ""}
+          </div>
+        )}
+      </div>
     </Card>
   );
 };
