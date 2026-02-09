@@ -563,11 +563,11 @@ function generateNotification(events, salesData) {
 
 // ── Notification Types ───────────────────────────────────────────────
 const NOTIFICATION_TYPES = {
-  milestone: { icon: "🎯", color: "#f59e0b", label: "Milestone" },
-  highPerformer: { icon: "⭐", color: "#a78bfa", label: "Achievement" },
-  eventAlert: { icon: "📡", color: "#34d399", label: "Event" },
+  milestone: { icon: "🎯", color: "#FBC500", label: "Milestone" },
+  highPerformer: { icon: "⭐", color: "#BE6CFF", label: "Achievement" },
+  eventAlert: { icon: "📡", color: "#FF00B1", label: "Event" },
   warning: { icon: "⚠️", color: "#ef4444", label: "Alert" },
-  info: { icon: "ℹ️", color: "#60a5fa", label: "Info" },
+  info: { icon: "ℹ️", color: "#3CB6BA", label: "Info" },
 };
 
 // ── Custom Hooks ─────────────────────────────────────────────────────
@@ -789,8 +789,8 @@ function useLeafletLoader() {
 // ── Presentational Components ────────────────────────────────────────
 const StatusBadge = ({ status }) => {
   const colors = {
-    live: { bg: "#0f2d1a", text: "#34d399", dot: "#34d399" },
-    upcoming: { bg: "#1e1b2e", text: "#a78bfa", dot: "#a78bfa" },
+    live: { bg: "#2d0020", text: "#FF00B1", dot: "#FF00B1" },
+    upcoming: { bg: "#1a0d2e", text: "#BE6CFF", dot: "#BE6CFF" },
     completed: { bg: "#1a1a2e", text: "#64748b", dot: "#64748b" },
   };
   const c = colors[status] || colors.upcoming;
@@ -802,7 +802,7 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const ProgressBar = ({ value, max, color = "#34d399" }) => {
+const ProgressBar = ({ value, max, color = "#FF00B1" }) => {
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   return (
     <div style={{ width: "100%", height: 6, background: "#1a1a2e", borderRadius: 3, overflow: "hidden" }}>
@@ -818,20 +818,20 @@ const RankBadge = ({ rank }) => {
 
 const SectionHeader = ({ children, icon, subtitle }) => (
   <div style={{ marginBottom: 20 }}>
-    <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: "#f1f5f9", margin: 0, display: "flex", alignItems: "center", gap: 10 }}>
+    <h2 style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 20, fontWeight: 900, color: "#f1f5f9", margin: 0, display: "flex", alignItems: "center", gap: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>
       <span style={{ fontSize: 20 }}>{icon}</span> {children}
     </h2>
-    {subtitle && <p style={{ color: "#64748b", fontSize: 13, margin: "4px 0 0 30px", fontFamily: "'DM Sans', sans-serif" }}>{subtitle}</p>}
+    {subtitle && <p style={{ color: "#64748b", fontSize: 12, margin: "4px 0 0 30px", fontFamily: "'Montserrat', sans-serif", fontWeight: 600 }}>{subtitle}</p>}
   </div>
 );
 
 const CountryTab = ({ country, active, onClick }) => (
   <button onClick={onClick} style={{
-    padding: "8px 18px", borderRadius: 8, border: active ? "1px solid #34d39944" : "1px solid #1e293b",
-    background: active ? "linear-gradient(135deg, #0f2d1a, #0a1628)" : "transparent",
-    color: active ? "#34d399" : "#64748b", cursor: "pointer", fontSize: 13, fontWeight: 600,
-    fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: 6,
-    transition: "all 0.2s ease",
+    padding: "8px 18px", borderRadius: 8, border: active ? "1px solid #FF00B144" : "1px solid #1e293b",
+    background: active ? "linear-gradient(135deg, #2d0020, #0a1628)" : "transparent",
+    color: active ? "#FF00B1" : "#64748b", cursor: "pointer", fontSize: 13, fontWeight: 700,
+    fontFamily: "'Montserrat', sans-serif", display: "flex", alignItems: "center", gap: 6,
+    transition: "all 0.2s ease", textTransform: "uppercase", letterSpacing: 0.5,
   }}>
     <span style={{ fontSize: 16 }}>{FLAGS[country]}</span> {country}
   </button>
@@ -857,26 +857,26 @@ const LiveSaleTicker = ({ sales, isLive }) => {
     <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8, position: "relative" }}>
       {sales.slice(0, 8).map((sale, i) => (
         <div key={sale.id} style={{
-          minWidth: 220, padding: "10px 14px", background: "linear-gradient(135deg, #0f2d1a, #0a1628)",
-          border: "1px solid #34d39922", borderRadius: 10, animation: i === 0 ? "slideIn 0.4s ease" : "none",
+          minWidth: 220, padding: "10px 14px", background: "linear-gradient(135deg, #2d0020, #0a1628)",
+          border: "1px solid #FF00B122", borderRadius: 10, animation: i === 0 ? "slideIn 0.4s ease" : "none",
           flexShrink: 0,
         }}>
           {USE_MOCK_DATA ? (
             <>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <span style={{ color: "#34d399", fontSize: 15, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>{currencySymbol}{sale.amount.toFixed(2)}</span>
+                <span style={{ color: "#FF00B1", fontSize: 15, fontWeight: 700, fontFamily: "'Montserrat', sans-serif" }}>{currencySymbol}{sale.amount.toFixed(2)}</span>
                 <span style={{ color: "#475569", fontSize: 10 }}>{sale.time}</span>
               </div>
-              <div style={{ color: "#94a3b8", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>{sale.product}</div>
+              <div style={{ color: "#94a3b8", fontSize: 11, fontFamily: "'Montserrat', sans-serif" }}>{sale.product}</div>
               <div style={{ color: "#475569", fontSize: 10, marginTop: 2 }}>{sale.venue}</div>
             </>
           ) : (
             <>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <span style={{ color: "#34d399", fontSize: 13, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>{sale.agentName || sale.product}</span>
+                <span style={{ color: "#FF00B1", fontSize: 13, fontWeight: 700, fontFamily: "'Montserrat', sans-serif" }}>{sale.agentName || sale.product}</span>
                 <span style={{ color: "#475569", fontSize: 10 }}>{sale.time}</span>
               </div>
-              <div style={{ color: "#94a3b8", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}>{sale.eventName}</div>
+              <div style={{ color: "#94a3b8", fontSize: 11, fontFamily: "'Montserrat', sans-serif" }}>{sale.eventName}</div>
             </>
           )}
         </div>
@@ -1003,10 +1003,10 @@ const NotificationPanel = ({ notifications, isOpen, onClose, onMarkAllRead, onMa
         display: "flex", justifyContent: "space-between", alignItems: "center",
         padding: "14px 16px", borderBottom: "1px solid #1e293b",
       }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", fontFamily: "'DM Sans', sans-serif" }}>Notifications</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", fontFamily: "'Montserrat', sans-serif" }}>Notifications</span>
         <button onClick={onMarkAllRead} style={{
-          background: "none", border: "none", color: "#34d399", fontSize: 11,
-          cursor: "pointer", fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+          background: "none", border: "none", color: "#FF00B1", fontSize: 11,
+          cursor: "pointer", fontWeight: 600, fontFamily: "'Montserrat', sans-serif",
         }}>
           Mark all read
         </button>
@@ -1064,9 +1064,9 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
     markersRef.current = [];
 
     const countryColors = {
-      "United Kingdom": "#60a5fa",
-      "Ireland": "#34d399",
-      "United States": "#f59e0b",
+      "United Kingdom": "#3CB6BA",
+      "Ireland": "#3CB6BA",
+      "United States": "#FF00B1",
     };
 
     const currencySymbol = USE_MOCK_DATA ? "\u00a3" : "$";
@@ -1083,8 +1083,8 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
       if (!coords) return;
 
       const statusColor = {
-        live: "#34d399",
-        upcoming: "#a78bfa",
+        live: "#FF00B1",
+        upcoming: "#BE6CFF",
         completed: "#64748b",
       }[event.status] || "#64748b";
 
@@ -1098,10 +1098,10 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
       }).addTo(map);
 
       const statusLabel = event.status.charAt(0).toUpperCase() + event.status.slice(1);
-      const statusDot = event.status === "live" ? '<span style="color:#34d399">\u25cf</span>' : event.status === "upcoming" ? '<span style="color:#a78bfa">\u25cf</span>' : '<span style="color:#64748b">\u25cf</span>';
+      const statusDot = event.status === "live" ? '<span style="color:#FF00B1">\u25cf</span>' : event.status === "upcoming" ? '<span style="color:#BE6CFF">\u25cf</span>' : '<span style="color:#64748b">\u25cf</span>';
 
       marker.bindPopup(
-        `<div style="font-family:'DM Sans',sans-serif;min-width:180px">
+        `<div style="font-family:'Montserrat',sans-serif;min-width:180px">
           <div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#f1f5f9">${event.name}</div>
           <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">\ud83d\udccd ${event.venue}</div>
           <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">\ud83d\udcc6 ${event.date}</div>
@@ -1109,8 +1109,8 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
             <span style="font-size:11px">${statusDot} ${statusLabel}</span>
           </div>
           <div style="display:flex;justify-content:space-between;border-top:1px solid #1e293b;padding-top:6px;margin-top:4px">
-            <span style="font-size:12px;color:#60a5fa;font-weight:600">${event.ticketsSold} sales</span>
-            <span style="font-size:12px;color:#34d399;font-weight:600">${currencySymbol}${event.revenue.toLocaleString()}</span>
+            <span style="font-size:12px;color:#3CB6BA;font-weight:600">${event.ticketsSold} sales</span>
+            <span style="font-size:12px;color:#FF00B1;font-weight:600">${currencySymbol}${event.revenue.toLocaleString()}</span>
           </div>
         </div>`,
         { className: "croci-popup" }
@@ -1156,10 +1156,10 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
       <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 11, color: "#64748b" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#34d399", display: "inline-block" }} /> Live
+            <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#FF00B1", display: "inline-block" }} /> Live
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#a78bfa", display: "inline-block" }} /> Upcoming
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#BE6CFF", display: "inline-block" }} /> Upcoming
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#64748b", display: "inline-block" }} /> Completed
@@ -1176,6 +1176,19 @@ const EventMap = ({ events, leafletLoaded, leafletError }) => {
     </Card>
   );
 };
+
+// ── Croci Logo (inline SVG) ──────────────────────────────────────────
+const CrociLogo = ({ height = 28, color = "#FF00B1" }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 269.69" height={height} style={{ display: "block" }}>
+    <path fill={color} d="M91.02,13.3c-3.75-4.12-8.87-7.36-15.36-9.74C69.16,1.19,60.8,0,50.56,0S31.95,1.19,25.46,3.56c-6.5,2.38-11.61,5.62-15.36,9.74C6.35,17.42,3.73,22.23,2.23,27.72.73,33.22,0,38.96,0,44.95v179.79c0,5.99.75,11.74,2.25,17.23,1.5,5.49,4.12,10.3,7.87,14.42,3.75,4.12,8.86,7.37,15.36,9.74,6.49,2.37,14.85,3.56,25.1,3.56s18.6-1.19,25.1-3.56c6.49-2.37,11.61-5.62,15.36-9.74,3.75-4.12,6.37-8.93,7.87-14.42,1.5-5.49,2.25-11.24,2.25-17.23v-78.66H56.21v83.16c0,4.49-1.87,6.74-5.62,6.74s-5.62-2.25-5.62-6.74V40.45c0-4.49,1.87-6.74,5.62-6.74s5.62,2.25,5.62,6.74v68.17h44.95V44.95c0-5.99-.75-11.74-2.25-17.23-1.5-5.49-4.12-10.3-7.87-14.42Z"/>
+    <path fill={color} d="M176.8,152.18l-.75-6.93c6.99-1.28,12.79-3.28,17.42-5.97,4.62-2.7,8.24-5.97,10.86-9.82,2.62-3.85,4.43-8.22,5.43-13.1.99-4.88,1.5-9.89,1.5-15.03V45.08c0-6.16-.75-11.94-2.25-17.34-1.5-5.39-4.12-10.14-7.87-14.26-3.75-4.1-8.87-7.38-15.36-9.82C179.28,1.22,170.92,0,160.68,0h-50.57v269.69h44.95V146.4h6.74l11.24,123.29h45.7l-13.11-117.51h-28.84ZM166.31,109.38c0,4.49-1.87,6.74-5.62,6.74h-5.62V37.46h5.62c3.75,0,5.62,2.25,5.62,6.74v65.18Z"/>
+    <path fill={color} d="M312.39,13.3c-3.75-4.12-8.87-7.36-15.36-9.74C290.53,1.19,282.17,0,271.93,0s-18.61,1.19-25.1,3.56c-6.5,2.38-11.61,5.62-15.36,9.74-3.75,4.12-6.37,8.93-7.87,14.42-1.5,5.5-2.25,11.24-2.25,17.23v179.79c0,5.99.75,11.74,2.25,17.23,1.5,5.49,4.12,10.3,7.87,14.42,3.75,4.12,8.86,7.37,15.36,9.74,6.49,2.37,14.86,3.56,25.1,3.56s18.6-1.19,25.1-3.56c6.49-2.37,11.61-5.62,15.36-9.74,3.75-4.12,6.37-8.93,7.87-14.42,1.5-5.49,2.25-11.24,2.25-17.23V44.95c0-5.99-.75-11.74-2.25-17.23-1.5-5.49-4.12-10.3-7.87-14.42ZM277.56,229.24c0,4.49-1.87,6.74-5.62,6.74s-5.62-2.25-5.62-6.74V40.45c0-4.49,1.87-6.74,5.62-6.74s5.62,2.25,5.62,6.74v188.79Z"/>
+    <path fill={color} d="M432.63,108.63V54.99c-14.75-3.09-26.01-16.2-26.06-31.74-.02-6.59,1.83-12.69,5.04-17.81-1.41-.67-2.89-1.3-4.46-1.87C400.65,1.19,392.29,0,382.05,0s-18.61,1.19-25.1,3.56c-6.5,2.38-11.61,5.62-15.36,9.74-3.75,4.12-6.37,8.93-7.87,14.42-1.5,5.5-2.25,11.24-2.25,17.23v179.79c0,5.99.75,11.74,2.25,17.23,1.5,5.49,4.12,10.3,7.87,14.42,3.75,4.12,8.86,7.37,15.36,9.74,6.49,2.37,14.86,3.56,25.1,3.56s18.6-1.19,25.1-3.56c6.49-2.37,11.61-5.62,15.36-9.74,3.75-4.12,6.37-8.93,7.87-14.42,1.5-5.49,2.25-11.24,2.25-17.23v-78.66h-44.95v83.16c0,4.49-1.87,6.74-5.62,6.74s-5.62-2.25-5.62-6.74V40.45c0-4.49,1.87-6.74,5.62-6.74s5.62,2.25,5.62,6.74v68.17h44.95Z"/>
+    <path fill={color} d="M470.09,269.69h-28.44V55.68h28.44c9.43,0,17.07,7.64,17.07,17.08v179.86c0,9.43-7.64,17.07-17.07,17.07"/>
+    <path fill={color} d="M512,25.88c-1,2.73-1.67,5.64-3.05,8.17-4.97,9.12-15.96,13.46-25.9,10.49-10.17-3.03-16.89-12.69-16.17-23.22.71-10.35,8.63-19,18.89-20.63,12.29-1.95,23.57,6,25.86,18.21.07.37.24.73.37,1.09v5.89Z"/>
+    <path fill={color} d="M439.37.4c12.38-.02,22.53,10.02,22.59,22.37.06,12.43-10.04,22.61-22.5,22.69-12.36.08-22.6-10.02-22.64-22.32-.04-12.68,9.93-22.72,22.56-22.75"/>
+  </svg>
+);
 
 // ── World Clocks Component ───────────────────────────────────────────
 function WorldClocks({ currentTime }) {
@@ -1239,23 +1252,23 @@ function WorldClocks({ currentTime }) {
               width: size, height: size, borderRadius: "50%",
               background: "radial-gradient(circle at 40% 35%, #111827, #060a10)",
               border: "1.5px solid #1e293b",
-              boxShadow: "0 0 12px rgba(52,211,153,0.06), inset 0 1px 2px rgba(255,255,255,0.03)",
+              boxShadow: "0 0 12px rgba(255,0,177,0.08), inset 0 1px 2px rgba(255,255,255,0.03)",
               position: "relative",
             }}>
               <svg width={size} height={size} style={{ position: "absolute", top: 0, left: 0 }}>
                 {markers}
                 {hand(14, hourDeg, 2.2, "#e2e8f0", true)}
                 {hand(19, minDeg, 1.5, "#94a3b8", true)}
-                {hand(20, secDeg, 0.6, "#34d399", false)}
-                <circle cx={cx} cy={cy} r={2} fill="#34d399" />
+                {hand(20, secDeg, 0.6, "#FF00B1", false)}
+                <circle cx={cx} cy={cy} r={2} fill="#FF00B1" />
                 <circle cx={cx} cy={cy} r={0.8} fill="#060a10" />
               </svg>
             </div>
             <div style={{ textAlign: "center", lineHeight: 1.2 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", letterSpacing: 0.5, fontFamily: "'DM Sans', sans-serif" }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", letterSpacing: 0.5, fontFamily: "'Montserrat', sans-serif" }}>
                 {digitalTime}
               </div>
-              <div style={{ fontSize: 8, color: "#475569", textTransform: "uppercase", letterSpacing: 1, fontFamily: "'DM Sans', sans-serif" }}>
+              <div style={{ fontSize: 8, color: "#475569", textTransform: "uppercase", letterSpacing: 1, fontFamily: "'Montserrat', sans-serif" }}>
                 {city}
               </div>
             </div>
@@ -1295,10 +1308,10 @@ function PasswordGate({ children }) {
       minHeight: "100vh",
       background: "linear-gradient(180deg, #060a10 0%, #0a0f1a 40%, #080d16 100%)",
       display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: "'DM Sans', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
         @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
       `}</style>
@@ -1310,18 +1323,10 @@ function PasswordGate({ children }) {
         backdropFilter: "blur(20px)",
         width: "100%", maxWidth: 400,
       }}>
-        <div style={{
-          width: 60, height: 60, borderRadius: 16, margin: "0 auto 20px",
-          background: "linear-gradient(135deg, #34d399, #059669)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 28, fontWeight: 700, color: "#000",
-          fontFamily: "'Playfair Display', serif",
-          boxShadow: "0 4px 20px rgba(52,211,153,0.3)",
-        }}>C</div>
-        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: "#f1f5f9", margin: "0 0 4px", letterSpacing: -0.3 }}>
-          Croci <span style={{ color: "#34d399" }}>Collective</span>
-        </h1>
-        <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 28px", letterSpacing: 2, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ margin: "0 auto 20px", filter: "drop-shadow(0 4px 20px rgba(255,0,177,0.3))" }}>
+          <CrociLogo height={44} color="#FF00B1" />
+        </div>
+        <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 28px", letterSpacing: 2.5, textTransform: "uppercase", fontFamily: "'Montserrat', sans-serif", fontWeight: 700 }}>
           Operations Portal
         </p>
         <form onSubmit={handleSubmit}>
@@ -1335,11 +1340,11 @@ function PasswordGate({ children }) {
               width: "100%", padding: "14px 18px",
               background: "#0a0f1a", border: `1px solid ${error ? "#ef4444" : "#1e293b"}`,
               borderRadius: 10, color: "#f1f5f9", fontSize: 14,
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "'Montserrat', sans-serif",
               outline: "none", transition: "border-color 0.2s ease",
               marginBottom: 12,
             }}
-            onFocus={(e) => { if (!error) e.target.style.borderColor = "#34d399"; }}
+            onFocus={(e) => { if (!error) e.target.style.borderColor = "#FF00B1"; }}
             onBlur={(e) => { if (!error) e.target.style.borderColor = "#1e293b"; }}
           />
           {error && (
@@ -1349,10 +1354,10 @@ function PasswordGate({ children }) {
           )}
           <button type="submit" style={{
             width: "100%", padding: "14px 0",
-            background: "linear-gradient(135deg, #34d399, #059669)",
+            background: "linear-gradient(135deg, #FF00B1, #cc008e)",
             border: "none", borderRadius: 10,
             color: "#000", fontSize: 14, fontWeight: 700,
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: "'Montserrat', sans-serif",
             cursor: "pointer", transition: "opacity 0.2s ease",
           }}
             onMouseEnter={(e) => e.target.style.opacity = "0.9"}
@@ -1427,16 +1432,16 @@ export default function CrociPortal() {
 
   const kpis = USE_MOCK_DATA
     ? [
-        { label: "Live Events", value: liveCount, color: "#34d399", icon: "📡" },
-        { label: "Sales Today", value: totalSalesToday.toLocaleString(), color: "#60a5fa", icon: "🛒" },
-        { label: "Revenue Today", value: `${currencySymbol}${totalRevToday.toLocaleString()}`, color: "#f59e0b", icon: "💰" },
-        { label: "Active Countries", value: COUNTRIES.length, color: "#a78bfa", icon: "🌍" },
+        { label: "Live Events", value: liveCount, color: "#FF00B1", icon: "📡" },
+        { label: "Sales Today", value: totalSalesToday.toLocaleString(), color: "#3CB6BA", icon: "🛒" },
+        { label: "Revenue Today", value: `${currencySymbol}${totalRevToday.toLocaleString()}`, color: "#FBC500", icon: "💰" },
+        { label: "Active Countries", value: COUNTRIES.length, color: "#BE6CFF", icon: "🌍" },
       ]
     : [
-        { label: "Live Events", value: liveCount, color: "#34d399", icon: "📡" },
-        { label: "Total Sales (Week)", value: totalSalesToday.toLocaleString(), color: "#60a5fa", icon: "🛒" },
-        { label: "Total Upfronts", value: `$${totalRevToday.toLocaleString()}`, color: "#f59e0b", icon: "💰" },
-        { label: "Events This Week", value: (thisWeekEvents["United States"] || []).length, color: "#a78bfa", icon: "📋" },
+        { label: "Live Events", value: liveCount, color: "#FF00B1", icon: "📡" },
+        { label: "Total Sales", value: totalSalesToday.toLocaleString(), color: "#3CB6BA", icon: "🛒" },
+        { label: "Total Upfronts", value: `$${totalRevToday.toLocaleString()}`, color: "#FBC500", icon: "💰" },
+        { label: "Events This Week", value: (thisWeekEvents["United States"] || []).length, color: "#BE6CFF", icon: "📋" },
       ];
 
   // Loading state for live data
@@ -1447,18 +1452,15 @@ export default function CrociPortal() {
           minHeight: "100vh",
           background: "linear-gradient(180deg, #060a10 0%, #0a0f1a 40%, #080d16 100%)",
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontFamily: "'DM Sans', sans-serif",
+          fontFamily: "'Montserrat', sans-serif",
         }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ width: 56, height: 56, borderRadius: 14, margin: "0 auto 20px",
-              background: "linear-gradient(135deg, #34d399, #059669)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 26, fontWeight: 700, color: "#000",
-              fontFamily: "'Playfair Display', serif",
-            }}>C</div>
+            <div style={{ margin: "0 auto 20px", filter: "drop-shadow(0 4px 20px rgba(255,0,177,0.3))" }}>
+              <CrociLogo height={40} color="#FF00B1" />
+            </div>
             <p style={{ color: "#64748b", fontSize: 14 }}>Loading live data from Google Sheets...</p>
             <div style={{ width: 200, height: 4, background: "#1e293b", borderRadius: 2, margin: "16px auto", overflow: "hidden" }}>
-              <div style={{ width: "40%", height: "100%", background: "#34d399", borderRadius: 2, animation: "shimmer 1.5s infinite" }} />
+              <div style={{ width: "40%", height: "100%", background: "#FF00B1", borderRadius: 2, animation: "shimmer 1.5s infinite" }} />
             </div>
           </div>
         </div>
@@ -1472,11 +1474,11 @@ export default function CrociPortal() {
       minHeight: "100vh",
       background: "linear-gradient(180deg, #060a10 0%, #0a0f1a 40%, #080d16 100%)",
       color: "#e2e8f0",
-      fontFamily: "'DM Sans', sans-serif",
+      fontFamily: "'Montserrat', sans-serif",
       padding: 0,
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -1488,7 +1490,7 @@ export default function CrociPortal() {
         ::-webkit-scrollbar-track { background: #0a0f1a; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
         * { box-sizing: border-box; }
-        .leaflet-popup-content-wrapper { background: #0d1117 !important; border: 1px solid #1e293b; border-radius: 10px !important; color: #e2e8f0; font-family: 'DM Sans', sans-serif; box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important; }
+        .leaflet-popup-content-wrapper { background: #0d1117 !important; border: 1px solid #1e293b; border-radius: 10px !important; color: #e2e8f0; font-family: 'Montserrat', sans-serif; box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important; }
         .leaflet-popup-tip { background: #0d1117 !important; }
         .leaflet-popup-content { margin: 12px 16px !important; font-size: 12px; line-height: 1.6; }
         .leaflet-popup-close-button { color: #64748b !important; }
@@ -1516,23 +1518,13 @@ export default function CrociPortal() {
       }}>
         {/* Left: Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{
-            width: 42, height: 42, borderRadius: 12,
-            background: "linear-gradient(135deg, #34d399, #059669)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 22, fontWeight: 700, color: "#000",
-            fontFamily: "'Playfair Display', serif",
-            boxShadow: "0 2px 12px rgba(52,211,153,0.25)",
-          }}>C</div>
+          <CrociLogo height={32} color="#FF00B1" />
           <div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, margin: 0, color: "#f1f5f9", letterSpacing: -0.3 }}>
-              Croci <span style={{ color: "#34d399" }}>Collective</span>
-            </h1>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
-              <p style={{ fontSize: 10, color: "#64748b", margin: 0, letterSpacing: 1.8, textTransform: "uppercase", fontFamily: "'DM Sans', sans-serif" }}>Operations Portal</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <p style={{ fontSize: 10, color: "#94a3b8", margin: 0, letterSpacing: 2, textTransform: "uppercase", fontFamily: "'Montserrat', sans-serif", fontWeight: 700 }}>Operations Portal</p>
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399", animation: "pulse 1.5s infinite" }} />
-                <span style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>LIVE</span>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF00B1", animation: "pulse 1.5s infinite" }} />
+                <span style={{ fontSize: 9, color: "#FF00B1", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>LIVE</span>
               </div>
             </div>
           </div>
@@ -1555,7 +1547,7 @@ export default function CrociPortal() {
               </div>
             )}
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", fontFamily: "'DM Sans', sans-serif" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", fontFamily: "'Montserrat', sans-serif" }}>
                 {currentTime.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
               </div>
             </div>
@@ -1592,8 +1584,8 @@ export default function CrociPortal() {
             <Card key={i} accentColor={kpi.color} style={{ animation: `fadeUp 0.5s ease ${i * 0.1}s both` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
-                  <p style={{ fontSize: 11, color: "#64748b", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: 1 }}>{kpi.label}</p>
-                  <p style={{ fontSize: 28, fontWeight: 700, color: kpi.color, margin: 0, fontFamily: "'DM Sans', sans-serif" }}>{kpi.value}</p>
+                  <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 }}>{kpi.label}</p>
+                  <p style={{ fontSize: 28, fontWeight: 900, color: kpi.color, margin: 0, fontFamily: "'Montserrat', sans-serif" }}>{kpi.value}</p>
                 </div>
                 <span style={{ fontSize: 24 }}>{kpi.icon}</span>
               </div>
@@ -1605,10 +1597,10 @@ export default function CrociPortal() {
         <EventMap events={allThisWeekEvents} leafletLoaded={leafletLoaded} leafletError={leafletError} />
 
         {/* ── Live Sales Ticker ────────────────────────── */}
-        <Card style={{ marginBottom: 28, boxShadow: "0 0 30px rgba(52, 211, 153, 0.03)" }}>
+        <Card style={{ marginBottom: 28, boxShadow: "0 0 30px rgba(255, 0, 177, 0.03)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34d399", animation: "pulse 1.5s infinite" }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#34d399", textTransform: "uppercase", letterSpacing: 1 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FF00B1", animation: "pulse 1.5s infinite" }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#FF00B1", textTransform: "uppercase", letterSpacing: 1 }}>
               {USE_MOCK_DATA ? "Live Sales Feed" : "Recent Sales Entries"}
             </span>
           </div>
@@ -1635,7 +1627,7 @@ export default function CrociPortal() {
                   padding: "6px 12px", borderRadius: 8,
                   background: "#0a0f1a", border: "1px solid #1e293b",
                   color: "#e2e8f0", fontSize: 13,
-                  fontFamily: "'DM Sans', sans-serif",
+                  fontFamily: "'Montserrat', sans-serif",
                   cursor: "pointer", outline: "none",
                 }}
               >
@@ -1680,8 +1672,8 @@ export default function CrociPortal() {
                         </td>
                       )}
                       <td style={{ padding: "12px 14px" }}><StatusBadge status={event.status} /></td>
-                      <td style={{ padding: "12px 14px", fontSize: 14, fontWeight: 700, color: "#60a5fa", fontVariantNumeric: "tabular-nums" }}>{event.ticketsSold}</td>
-                      <td style={{ padding: "12px 14px", fontSize: 14, fontWeight: 700, color: "#34d399", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{event.revenue.toLocaleString()}</td>
+                      <td style={{ padding: "12px 14px", fontSize: 14, fontWeight: 700, color: "#3CB6BA", fontVariantNumeric: "tabular-nums" }}>{event.ticketsSold}</td>
+                      <td style={{ padding: "12px 14px", fontSize: 14, fontWeight: 700, color: "#FF00B1", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{event.revenue.toLocaleString()}</td>
                       <td style={{ padding: "12px 14px", minWidth: 120 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <ProgressBar value={event.ticketsSold} max={event.target} />
@@ -1703,19 +1695,19 @@ export default function CrociPortal() {
                       <td style={{ padding: "12px 14px" }}><StatusBadge status={event.status} /></td>
                       <td style={{ padding: "12px 14px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: "#60a5fa", fontVariantNumeric: "tabular-nums" }}>{event.ticketsSold}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#3CB6BA", fontVariantNumeric: "tabular-nums" }}>{event.ticketsSold}</span>
                           <span style={{ color: "#475569", fontSize: 12 }}>/ {event.target || "?"}</span>
-                          <ProgressBar value={event.ticketsSold} max={event.target || 1} color={event.target > 0 && event.ticketsSold >= event.target ? "#34d399" : "#60a5fa"} />
+                          <ProgressBar value={event.ticketsSold} max={event.target || 1} color={event.target > 0 && event.ticketsSold >= event.target ? "#FF00B1" : "#3CB6BA"} />
                         </div>
                       </td>
                       <td style={{ padding: "12px 14px" }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: event.uniqueAgents >= event.expectedStaff && event.expectedStaff > 0 ? "#34d399" : "#f59e0b" }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: event.uniqueAgents >= event.expectedStaff && event.expectedStaff > 0 ? "#FF00B1" : "#FBC500" }}>
                           {event.staffFraction}
                         </span>
                       </td>
                       <td style={{ padding: "12px 14px" }}>
                         {event.cpa !== null
-                          ? <span style={{ fontSize: 13, fontWeight: 700, color: event.cpa <= 80 ? "#34d399" : event.cpa <= 150 ? "#f59e0b" : "#ef4444", fontVariantNumeric: "tabular-nums" }}>${event.cpa.toFixed(2)}</span>
+                          ? <span style={{ fontSize: 13, fontWeight: 700, color: event.cpa <= 80 ? "#FF00B1" : event.cpa <= 150 ? "#FBC500" : "#ef4444", fontVariantNumeric: "tabular-nums" }}>${event.cpa.toFixed(2)}</span>
                           : <span style={{ color: "#475569", fontSize: 12 }}>--</span>}
                       </td>
                     </tr>
@@ -1751,7 +1743,7 @@ export default function CrociPortal() {
                             <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{person.name}</p>
                             <p style={{ fontSize: 10, color: "#64748b", margin: 0 }}>{person.sales} sales · {person.conversionRate}% conv.</p>
                           </div>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: "#34d399", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{person.revenue.toLocaleString()}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "#FF00B1", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{person.revenue.toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
@@ -1809,7 +1801,7 @@ export default function CrociPortal() {
                             <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{person.name}</p>
                             <p style={{ fontSize: 10, color: "#64748b", margin: 0 }}>{person.sales} sales · {person.conversionRate}% conv.</p>
                           </div>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: "#34d399", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{person.revenue.toLocaleString()}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "#FF00B1", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{person.revenue.toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
@@ -1856,7 +1848,7 @@ export default function CrociPortal() {
                   style={{
                     width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
                     padding: "14px 18px", background: "#0a0f1a", border: "1px solid #1e293b", borderRadius: 10,
-                    cursor: "pointer", color: "#e2e8f0", fontFamily: "'DM Sans', sans-serif",
+                    cursor: "pointer", color: "#e2e8f0", fontFamily: "'Montserrat', sans-serif",
                     transition: "background 0.2s ease, border-color 0.2s ease",
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = "#0d1117"; e.currentTarget.style.borderColor = "#2d3748"; }}
@@ -1869,8 +1861,8 @@ export default function CrociPortal() {
                     </span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                    <span style={{ fontSize: 13, color: "#34d399", fontWeight: 600 }}>{currencySymbol}{camp.totalRevenue.toLocaleString()}</span>
-                    <span style={{ fontSize: 13, color: "#60a5fa" }}>{camp.totalUnits.toLocaleString()} units</span>
+                    <span style={{ fontSize: 13, color: "#FF00B1", fontWeight: 600 }}>{currencySymbol}{camp.totalRevenue.toLocaleString()}</span>
+                    <span style={{ fontSize: 13, color: "#3CB6BA" }}>{camp.totalUnits.toLocaleString()} units</span>
                     <span style={{ fontSize: 18, color: "#64748b", transition: "transform 0.2s", transform: expandedCampaign === ci ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
                   </div>
                 </button>
@@ -1898,11 +1890,11 @@ export default function CrociPortal() {
                                 onMouseLeave={(e) => e.currentTarget.style.background = pi % 2 === 0 ? "transparent" : "#0a0f1a08"}
                               >
                                 <td style={{ padding: "10px 18px", fontSize: 13, fontWeight: 500, color: "#e2e8f0" }}>{product.name}</td>
-                                <td style={{ padding: "10px 18px", fontSize: 13, fontWeight: 600, color: "#60a5fa", fontVariantNumeric: "tabular-nums" }}>{product.unitsSold}</td>
-                                <td style={{ padding: "10px 18px", fontSize: 13, fontWeight: 600, color: "#34d399", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{product.revenue.toLocaleString()}</td>
+                                <td style={{ padding: "10px 18px", fontSize: 13, fontWeight: 600, color: "#3CB6BA", fontVariantNumeric: "tabular-nums" }}>{product.unitsSold}</td>
+                                <td style={{ padding: "10px 18px", fontSize: 13, fontWeight: 600, color: "#FF00B1", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{product.revenue.toLocaleString()}</td>
                                 <td style={{ padding: "10px 18px", fontSize: 13, color: "#94a3b8", fontVariantNumeric: "tabular-nums" }}>{currencySymbol}{product.avgOrderValue}</td>
                                 <td style={{ padding: "10px 18px" }}>
-                                  <span style={{ fontSize: 12, fontWeight: 600, color: product.returnRate > 4 ? "#ef4444" : product.returnRate > 2 ? "#f59e0b" : "#34d399" }}>
+                                  <span style={{ fontSize: 12, fontWeight: 600, color: product.returnRate > 4 ? "#ef4444" : product.returnRate > 2 ? "#FBC500" : "#FF00B1" }}>
                                     {product.returnRate}%
                                   </span>
                                 </td>
@@ -1988,8 +1980,8 @@ export default function CrociPortal() {
 
         {/* ── Footer ───────────────────────────────────── */}
         <div style={{ textAlign: "center", padding: "20px 0 40px", borderTop: "1px solid #111827" }}>
-          <p style={{ fontSize: 11, color: "#334155", margin: 0 }}>
-            Croci Collective Operations Portal {USE_MOCK_DATA
+          <p style={{ fontSize: 11, color: "#334155", margin: 0, fontWeight: 600, fontFamily: "'Montserrat', sans-serif" }}>
+            Croci Operations Portal {USE_MOCK_DATA
               ? "\u00b7 Prototype Dashboard \u00b7 Data is simulated for demonstration"
               : `\u00b7 Live data from Google Sheets${lastUpdated ? ` \u00b7 Last refreshed ${timeAgo(lastUpdated)}` : ""}`}
           </p>
